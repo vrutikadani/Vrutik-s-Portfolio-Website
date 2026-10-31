@@ -1,8 +1,8 @@
 ---
 title: Every routing bug I've fixed was a policy question
 description: Lead routing looks like a workflow problem. Most of the time it's an unanswered business decision hiding inside one. Notes from rebuilding routing for a medical-device sales team.
-date: 2026-10-17
-draft: true
+date: 2026-10-31
+draft: false
 kind: Field note
 topics: [RevOps, Lead routing]
 related: [hubspot-revops-system]

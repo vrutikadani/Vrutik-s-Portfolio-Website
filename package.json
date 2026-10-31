@@ -15,7 +15,7 @@
     "verify": "npm run check && npm test && npm run build && npm run check:drafts && npm run budget && npm run links && npm run build:preview && npm run test:e2e",
     "build:preview": "node scripts/build-preview.mjs",
     "og": "node scripts/og.mjs",
-    "check:drafts": "node -e \"const fs=require('fs');const bad=fs.existsSync('dist/writing')&&fs.readdirSync('dist/writing').some(f=>f!=='index.html');if(bad||fs.readFileSync('dist/index.html','utf8').includes('href=\\\"/writing/')){console.error('Draft writing leaked into the production build');process.exit(1)}console.log('No drafts in production build')\""
+    "check:drafts": "node scripts/check-drafts.mjs"
   },
   "dependencies": {
     "@astrojs/mdx": "8.1.2",

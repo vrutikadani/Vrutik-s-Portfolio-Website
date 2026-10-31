@@ -11,13 +11,14 @@ Every public claim on the site was taken from the V4 Master Playbook, the eviden
 | 3 | Resume download | Current resume added at `/resume.pdf` for now (About, Contact, Pivot). **Known issues in that PDF:** it lists PNC (which this site omits), says "4+ years", shows the older ~$20M AOP figure, and publishes a phone number and a different email. Replace it with a clean version when ready: overwrite `public/resume.pdf`. |
 | 4 | Payroll title on About | Removed. |
 | 5 | commission-engine README | Repo updated to match the playbook wording (commit 1036ab7). |
+| 6 | Resume | Keep the current PDF as is (Vrutik's decision, Oct 31, 2026). |
+| 7 | Writing | All three pieces approved and published Oct 31, 2026. |
 
 ## Still open
 
 | # | Where | What to do |
 |---|---|---|
-| 1 | Writing (3 drafts) | Read, edit, set `draft: false` and a real date for each one you approve. Hidden until then. |
-| 2 | Photo | Add one authorized photo if you want one. |
+| 1 | Photo | Add one authorized photo if you want one. |
 
 ## Claims that rest on firsthand evidence only
 
