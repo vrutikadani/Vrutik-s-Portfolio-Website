@@ -12,6 +12,9 @@ Ordered by expected value. Each item says what evidence would justify it.
 - [ ] `/now` page once there's something current and public to say
 
 ## Lab
+- [ ] Lab JavaScript has about 0.8 KB left of its 12 KB budget (11.2 KB after Build or buy). Before adding a 7th scenario, load each scenario's script only when it scrolls into view
+- [ ] Build or buy: a cost just under $1M (e.g. $999,950) shows "$1000K"; round to "$1.0M" instead
+- [ ] Build or buy: the "Buy stays cheaper at every rule-change rate" verdict should also say by how much
 - [ ] Build-versus-buy explorer (illustrative inputs: effort, vendor cost, flexibility, maintenance)
 - [ ] Ownership game: how incentives and territory rules create conflicting behavior
 - [ ] Per-scenario OG images
