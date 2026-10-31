@@ -6,7 +6,8 @@ import { assignOwner, ZIPS } from '../lib/lab/owner';
 import { evaluateSignal } from '../lib/lab/signal';
 import { frames } from '../lib/lab/correction';
 import { population, evaluate, curve } from '../lib/lab/tradeoff';
-import { renderSteps, renderOutcome, renderFrame, renderChart } from '../lib/lab/render';
+import { ASSUMPTIONS, DEFAULT_BUILD_BUY, MAX_RULE_CHANGES, compareBuildBuy, formatMoney } from '../lib/lab/buildbuy';
+import { renderSteps, renderOutcome, renderFrame, renderChart, renderBuildBuyMetrics, renderBuildBuyChart } from '../lib/lab/render';
 
 // First paint is computed here, with the same code the browser runs.
 const lead0 = { specialty: 'Dermatology', email: 'office@glowclinic.com', message: "Hi, what does financing look like? We're adding a new service this quarter.", suppressed: false };
@@ -18,6 +19,23 @@ const f0 = frames(false);
 const pop = population();
 const costs0 = { threshold: 0.6, wrongCost: 30, reviewMinutes: 3, capacity: 40, perDay: 120 };
 const t0 = evaluate(pop, costs0);
+const bb0 = compareBuildBuy(DEFAULT_BUILD_BUY);
+const bbGroups = [
+  { name: 'Build', inputs: [
+    { key: 'buildWeeks', label: 'Engineer weeks to v1', min: 1, max: 52, step: 1, unit: 'weeks' },
+    { key: 'maintenanceHours', label: 'Maintenance hours per month', min: 0, max: 160, step: 1, unit: 'hours' },
+    { key: 'hourlyCost', label: 'Loaded cost per engineer hour', min: 25, max: 300, step: 5, unit: '$/hour' },
+  ] },
+  { name: 'Buy', inputs: [
+    { key: 'annualLicense', label: 'Annual license cost', min: 0, max: 120000, step: 1000, unit: '$/year' },
+    { key: 'integrationWeeks', label: 'Integration weeks', min: 0, max: 26, step: 1, unit: 'weeks' },
+    { key: 'coverage', label: 'Required features the vendor covers', min: 0, max: 100, step: 5, unit: '%' },
+  ] },
+  { name: 'Shared', inputs: [
+    { key: 'changesPerYear', label: 'Business rule changes per year', min: 0, max: MAX_RULE_CHANGES, step: 1, unit: 'times/year' },
+    { key: 'delayCost', label: 'Cost of one week of delay', min: 0, max: 20000, step: 250, unit: '$/week' },
+  ] },
+] as const;
 const tone = (d: string) => (d === 'SURFACE' || d === 'sdr' || d === 'draft' || d === 'handoff' ? 'go' : d === 'ROUTE' || d === 'review' ? 'ask' : 'stop');
 const leadLabel = { sdr: 'SDR task', draft: 'Agent sends one email', stop: 'Stop', suppressed: 'Suppressed' } as const;
 
@@ -27,11 +45,12 @@ const scenarios = [
   { id: 'signal', n: '3', q: 'Should a seller act on this signal?' },
   { id: 'wrong', n: '4', q: 'What happens when the system is wrong?' },
   { id: 'tradeoffs', n: '5', q: 'Where should the human review line sit?' },
+  { id: 'buildbuy', n: '6', q: 'Build or buy?' },
 ];
 ---
 <Base
   title="Decision Lab"
-  description="Interactive scenarios that show how GTM systems turn data into decisions: lead qualification, account ownership, product signals, corrections, and review thresholds. Synthetic data, real rule sets."
+  description="Interactive GTM decisions: lead qualification, account ownership, signals, corrections, review thresholds, and an illustrative build-or-buy cost comparison."
   crumbs={[{ name: 'Decision Lab', href: '/lab/' }]}
   pivot="Pick a scenario, change an input, and watch the trace. The lens switch at the top changes how much detail you see: business, product or engineering."
 >
@@ -39,8 +58,8 @@ const scenarios = [
     <p class="eyebrow">The Decision Lab</p>
     <h1>Change the inputs. Watch the rules decide.</h1>
     <p class="lede measure">
-      Each scenario runs a simplified port of a rule set from my public repositories, right in your browser,
-      on synthetic data. Every step is marked by who decides it:
+      Explore simplified rule sets from my public repositories and illustrative tradeoff models, right in your browser,
+      on synthetic data. Decision traces mark who decides each step:
       <span class="nowrap"><i class="mark mark--rules"></i> code,</span>
       <span class="nowrap"><i class="mark mark--model"></i> a model,</span> or
       <span class="nowrap"><i class="mark mark--person"></i> a person.</span>
@@ -295,6 +314,43 @@ const scenarios = [
       </div>
     </div>
   </section>
+
+  <!-- ============ 6. BUILD OR BUY ============ -->
+  <section id="buildbuy" class="wrap scenario" aria-labelledby="buildbuy-h" data-scenario="buildbuy">
+    <header class="s-head">
+      <p class="s-n mono">Scenario 6 · Tradeoff explorer</p>
+      <h2 id="buildbuy-h">Build or buy?</h2>
+      <p class="scenario-evidence"><EvidenceTag kind="hypothetical" /></p>
+    </header>
+    <div class="lensed">
+      <p data-lens="business">A license is only part of the cost. Compare three years of engineering, upkeep, rule changes, and waiting. A cheaper start can become a more expensive commitment.</p>
+      <p data-lens="product">Time to first value depends on feature fit. An uncovered requirement means extra work before the tool is useful. Compare the same required scope, then ask how often it will change.</p>
+      <p data-lens="engineering">This model books setup and delay at kickoff, then spreads license, maintenance, and rule-change work over 36 months. Missing feature coverage adds proportional implementation effort. These are illustrative assumptions, not a forecast.</p>
+    </div>
+    <p class="caveat mono">Illustrative numbers. Not from any real company.</p>
+    <noscript><p>The default comparison is shown below. Enable JavaScript to recalculate when you move a slider.</p></noscript>
+    <div class="s-grid">
+      <form class="inputs buildbuy-inputs" data-form="buildbuy">
+        <p class="panel-title mono">Assumptions</p>
+        {bbGroups.map((group) => <fieldset>
+          <legend>{group.name}</legend>
+          {group.inputs.map((i) => <label for={`bb-${i.key}`}>{i.label}
+            <output for={`bb-${i.key}`} data-bb-show={i.key} aria-live="off">{i.unit.startsWith('$') ? `${formatMoney(DEFAULT_BUILD_BUY[i.key])}${i.unit.slice(1)}` : `${DEFAULT_BUILD_BUY[i.key]} ${i.unit}`}</output>
+            <input id={`bb-${i.key}`} type="range" name={i.key} min={i.min} max={i.max} step={i.step} value={DEFAULT_BUILD_BUY[i.key]} data-unit={i.unit} />
+          </label>)}
+        </fieldset>)}
+      </form>
+      <div class="output">
+        <p class="panel-title mono">Result over 3 years</p>
+        <dl class="metrics" data-out="bb-metrics" set:html={renderBuildBuyMetrics(bb0)} />
+        <p class="tiny muted">Rule-change cost assumption: build = {ASSUMPTIONS.buildHoursPerChange} engineer hours per change; buy = {ASSUMPTIONS.buyHoursPerChange} engineer hours for a vendor ticket or workaround. Both use the loaded hourly cost.</p>
+        <div data-out="bb-chart" set:html={renderBuildBuyChart(bb0)} />
+        <div data-out="bb-verdict" aria-live="polite" aria-atomic="true" set:html={renderOutcome('The tradeoff', bb0.verdict, bb0.winner === 'tie' ? 'ask' : 'go')} />
+        <p class="tiny muted">Model assumptions: {ASSUMPTIONS.hoursPerWeek} engineer hours per week. Buy time to first value = integration weeks + build weeks × uncovered feature share. Both options book setup labor and time-to-value × weekly delay cost at month 0. Maintenance, license, and rule-change costs accrue evenly for all 36 months from kickoff, including setup time.</p>
+        <p class="tiny muted">No discounting, taxes, price increases, migration, or exit costs. Workaround effort is a simple proxy; missing features may be impossible to build. Lower modeled cost does not guarantee a better tool.</p>
+      </div>
+    </div>
+  </section>
 </Base>
 
 <script>
@@ -303,7 +359,8 @@ const scenarios = [
   import { evaluateSignal, type SignalInput } from '../lib/lab/signal';
   import { frames } from '../lib/lab/correction';
   import { population, evaluate, curve } from '../lib/lab/tradeoff';
-  import { renderSteps, renderOutcome, renderFrame, renderChart } from '../lib/lab/render';
+  import { compareBuildBuy, formatMoney, type BuildBuyInput } from '../lib/lab/buildbuy';
+  import { renderSteps, renderOutcome, renderFrame, renderChart, renderBuildBuyMetrics, renderBuildBuyChart } from '../lib/lab/render';
   import { track } from '../lib/track';
 
   const $ = <T extends Element = HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
@@ -411,6 +468,27 @@ const scenarios = [
       set('t-chart', renderChart(curve(pop, base), threshold));
     });
   });
+
+  // 6. Build or buy. Coalesce slider drags; only the verdict is announced.
+  const bbForm = $<HTMLFormElement>('[data-form="buildbuy"]');
+  let bbRaf = 0;
+  bbForm.addEventListener('input', () => {
+    begin('buildbuy');
+    cancelAnimationFrame(bbRaf);
+    bbRaf = requestAnimationFrame(() => {
+      const inputs = [...bbForm.querySelectorAll<HTMLInputElement>('input[type="range"]')];
+      const values = Object.fromEntries(inputs.map((i) => [i.name, Number(i.value)])) as unknown as BuildBuyInput;
+      inputs.forEach((i) => {
+        const unit = i.dataset.unit!;
+        bbForm.querySelector<HTMLOutputElement>(`[data-bb-show="${i.name}"]`)!.textContent = unit.startsWith('$') ? `${formatMoney(Number(i.value))}${unit.slice(1)}` : `${i.value} ${unit}`;
+      });
+      const r = compareBuildBuy(values);
+      set('bb-metrics', renderBuildBuyMetrics(r));
+      set('bb-chart', renderBuildBuyChart(r));
+      set('bb-verdict', renderOutcome('The tradeoff', r.verdict, r.winner === 'tie' ? 'ask' : 'go'));
+    });
+  });
+  bbForm.addEventListener('change', () => done('buildbuy'));
 </script>
 
 <style>
@@ -435,6 +513,7 @@ const scenarios = [
   .scen-nav { display: flex; gap: var(--space-s); }
   .scen-nav a { font-size: 0.95rem; text-decoration: none; white-space: nowrap; padding-block: 0.6rem; color: var(--text-soft); }
   .scen-nav a:hover { color: var(--text); text-decoration: underline; }
+  .scen-nav a { min-width: var(--target-min); min-height: var(--target-min); display: inline-flex; align-items: center; gap: var(--space-3xs); }
   @media (max-width: 70rem) { .sn-q { display: none; } .scen-nav a .mono::before { content: '#'; } }
 
   .scenario { padding-block: var(--space-2xl) var(--space-l); scroll-margin-top: 8rem; border-bottom: 1px solid var(--line); }
@@ -532,6 +611,12 @@ const scenarios = [
   .output :global(.chart .curdot) { fill: var(--person); }
   .output :global(.chart .tick) { font-family: var(--font-mono); font-size: 11px; fill: var(--text-muted); }
   .output :global(.chart .note) { font-family: var(--font-serif); font-style: italic; font-size: 13px; fill: var(--text-soft); }
+  .output :global(.chart .buy-line) { stroke-dasharray: 7 5; }
+  .buildbuy-inputs input[type='range'] { min-height: var(--target-min); }
+  .scenario-evidence { margin-block: 0 var(--space-s); }
+  @media (max-width: 40rem) {
+    .output :global(.chart .tick), .output :global(.chart .note) { font-size: 22px; }
+  }
 
   @media (max-width: 52rem) {
     .s-grid, .s-foot { grid-template-columns: 1fr; }

@@ -99,6 +99,9 @@ test('Lab: lens switch changes the explanation without JavaScript', async ({ bro
   await expect(eng).toBeVisible();
   // First paint is server-rendered, so the trace exists with JS off.
   await expect(page.locator('[data-out="lead-outcome"]')).toContainText('score 80');
+  await expect(page.locator('[data-out="bb-verdict"]')).toContainText('Buy costs $4.2K less');
+  await expect(page.locator('[data-out="bb-metrics"]')).toContainText('$108K');
+  await expect(page.locator('#buildbuy [data-lens="engineering"]')).toBeVisible();
   await ctx.close();
 });
 
@@ -107,6 +110,39 @@ test('Tradeoff slider recomputes', async ({ page }) => {
   const before = await page.locator('[data-out="t-metrics"]').innerText();
   await page.locator('input[name="threshold"]').fill('0.9');
   await expect(page.locator('[data-out="t-metrics"]')).not.toHaveText(before);
+});
+
+test('Build or buy: a keyboard slider change updates the verdict and tracks the scenario', async ({ page }) => {
+  await page.goto('/lab/#buildbuy');
+  const verdict = page.locator('[data-out="bb-verdict"]');
+  await expect(verdict).toContainText('Buy costs $4.2K less');
+  await page.evaluate(() => {
+    (window as any).__bbEvents = [];
+    addEventListener('site:track', (e: any) => (window as any).__bbEvents.push(e.detail));
+  });
+  const slider = page.locator('#bb-changesPerYear');
+  await slider.focus();
+  await slider.press('End');
+  await expect(slider).toHaveValue('52');
+  await expect(verdict).toContainText('Build costs');
+  await expect(page.locator('[data-out="bb-metrics"]')).toContainText('$374.4K');
+  const events = await page.evaluate(() => (window as any).__bbEvents);
+  expect(events).toContainEqual({ event: 'lab_scenario_started', scenario: 'buildbuy' });
+  expect(events).toContainEqual({ event: 'lab_scenario_completed', scenario: 'buildbuy' });
+});
+
+test('Lab chart text stays readable at 390px wide', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/lab/');
+  for (const scenario of ['#tradeoffs', '#buildbuy']) {
+    const sizes = await page.locator(`${scenario} .chart text`).evaluateAll((texts) => texts.map((text) => {
+      const svgText = text as SVGTextElement;
+      const matrix = svgText.getScreenCTM()!;
+      return parseFloat(getComputedStyle(svgText).fontSize) * Math.hypot(matrix.c, matrix.d);
+    }));
+    expect(sizes.length).toBeGreaterThan(0);
+    for (const size of sizes) expect(size).toBeGreaterThanOrEqual(11);
+  }
 });
 
 test('analytics events fire without leaking typed text', async ({ page }) => {
