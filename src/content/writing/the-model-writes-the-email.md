@@ -1,8 +1,8 @@
 ---
 title: The model writes the email. Code decides who gets one.
 description: How I split work between deterministic rules, a language model and a person when building an AI first-touch sales agent, and why the split matters more than the prompt.
-date: 2026-10-30
-draft: true
+date: 2026-10-31
+draft: false
 kind: Essay
 topics: [AI agents, GTM engineering]
 related: [ai-first-touch-agent]

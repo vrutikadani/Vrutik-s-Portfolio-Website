@@ -1,8 +1,8 @@
 ---
 title: Every write-back needs an inverse
 description: A bug where a seller's correction fixed future decisions but left the CRM wrong, and the design rule it taught me about automations that write to a system of record.
-date: 2026-10-24
-draft: true
+date: 2026-10-31
+draft: false
 kind: Teardown
 topics: [CRM architecture, Reliability]
 related: [gtm-decision-engine]
