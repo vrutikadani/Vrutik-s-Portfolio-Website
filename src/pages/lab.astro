@@ -1,0 +1,541 @@
+---
+import Base from '../layouts/Base.astro';
+import EvidenceTag from '../components/EvidenceTag.astro';
+import { scoreLead, handleReply, REPLIES, SPECIALTIES } from '../lib/lab/lead';
+import { assignOwner, ZIPS } from '../lib/lab/owner';
+import { evaluateSignal } from '../lib/lab/signal';
+import { frames } from '../lib/lab/correction';
+import { population, evaluate, curve } from '../lib/lab/tradeoff';
+import { renderSteps, renderOutcome, renderFrame, renderChart } from '../lib/lab/render';
+
+// First paint is computed here, with the same code the browser runs.
+const lead0 = { specialty: 'Dermatology', email: 'office@glowclinic.com', message: "Hi, what does financing look like? We're adding a new service this quarter.", suppressed: false };
+const l0 = scoreLead(lead0);
+const r0 = handleReply(REPLIES[0]);
+const own0 = assignOwner({ lifecycle: 'mql', specialty: 'Med spa', medicalDirector: 'blank', zip: '92801', manualLock: false, customer: false, corporate: false, state: 'CA' });
+const sig0 = evaluateSignal({ usage: true, adoption: true, breadth: false, partitionLoaded: true, youngAccount: false, oneUserHeavy: false, domainMatch: false, identityUnique: true, ownerActive: true, openOpp: true, twoWayRecent: false, openSignal: false });
+const f0 = frames(false);
+const pop = population();
+const costs0 = { threshold: 0.6, wrongCost: 30, reviewMinutes: 3, capacity: 40, perDay: 120 };
+const t0 = evaluate(pop, costs0);
+const tone = (d: string) => (d === 'SURFACE' || d === 'sdr' || d === 'draft' || d === 'handoff' ? 'go' : d === 'ROUTE' || d === 'review' ? 'ask' : 'stop');
+const leadLabel = { sdr: 'SDR task', draft: 'Agent sends one email', stop: 'Stop', suppressed: 'Suppressed' } as const;
+
+const scenarios = [
+  { id: 'lead', n: '1', q: 'Should the agent email this lead?' },
+  { id: 'owner', n: '2', q: 'Who owns this account?' },
+  { id: 'signal', n: '3', q: 'Should a seller act on this signal?' },
+  { id: 'wrong', n: '4', q: 'What happens when the system is wrong?' },
+  { id: 'tradeoffs', n: '5', q: 'Where should the human review line sit?' },
+];
+---
+<Base
+  title="Decision Lab"
+  description="Interactive scenarios that show how GTM systems turn data into decisions: lead qualification, account ownership, product signals, corrections, and review thresholds. Synthetic data, real rule sets."
+  crumbs={[{ name: 'Decision Lab', href: '/lab/' }]}
+  pivot="Pick a scenario, change an input, and watch the trace. The lens switch at the top changes how much detail you see: business, product or engineering."
+>
+  <header class="wrap lab-head">
+    <p class="eyebrow">The Decision Lab</p>
+    <h1>Change the inputs. Watch the rules decide.</h1>
+    <p class="lede measure">
+      Each scenario runs a simplified port of a rule set from my public repositories, right in your browser,
+      on synthetic data. Every step is marked by who decides it:
+      <span class="nowrap"><i class="mark mark--rules"></i> code,</span>
+      <span class="nowrap"><i class="mark mark--model"></i> a model,</span> or
+      <span class="nowrap"><i class="mark mark--person"></i> a person.</span>
+    </p>
+    <div class="head-tags"><EvidenceTag kind="synthetic-public" /><EvidenceTag kind="hypothetical" /></div>
+  </header>
+
+  <div class="lab-bar">
+    <div class="wrap bar-inner">
+      <fieldset class="lens">
+        <legend class="mono">Lens</legend>
+        <label><input type="radio" name="lens" value="business" id="lens-business" checked /> Business</label>
+        <label><input type="radio" name="lens" value="product" id="lens-product" /> Product</label>
+        <label><input type="radio" name="lens" value="engineering" id="lens-engineering" /> Engineering</label>
+      </fieldset>
+      <nav aria-label="Scenarios" class="scen-nav">
+        {scenarios.map((s) => <a href={`#${s.id}`}><span class="mono">{s.n}</span> <span class="sn-q">{s.q}</span></a>)}
+      </nav>
+    </div>
+  </div>
+
+  <!-- ============ 1. LEAD ============ -->
+  <section id="lead" class="wrap scenario" aria-labelledby="lead-h" data-scenario="lead">
+    <header class="s-head">
+      <p class="s-n mono">Scenario 1</p>
+      <h2 id="lead-h">Should the agent email this lead?</h2>
+    </header>
+    <div class="lensed">
+      <p data-lens="business">An SDR's hour spent on a student is an hour not spent on a buyer. The agent's job is triage: send real buyers straight to a person, send one short email to the maybes, and stop on everyone else.</p>
+      <p data-lens="product">SDRs only trust routing they can read. So every point in the score has a written reason, and the reasons travel with the handoff. The model is not used to score. It only reads replies.</p>
+      <p data-lens="engineering">Scoring is regex and lookup tables (<code>qualify.py</code>). Opt-outs are checked by rule before any model call. Model output is parsed defensively: malformed output becomes <code>unclear</code> at confidence 0 and goes to review.</p>
+    </div>
+
+    <div class="s-grid">
+      <form class="inputs" data-form="lead">
+        <p class="panel-title mono">Inputs</p>
+        <label>Specialty
+          <select name="specialty">{SPECIALTIES.map((s) => <option selected={s === lead0.specialty}>{s}</option>)}</select>
+        </label>
+        <label>Email
+          <input name="email" type="email" value={lead0.email} autocomplete="off" />
+        </label>
+        <label>Form message
+          <textarea name="message" rows="3">{lead0.message}</textarea>
+        </label>
+        <div class="presets" role="group" aria-label="Example messages">
+          <button type="button" data-msg="Can I get a quote and a demo? Hoping to buy soon.">Buyer</button>
+          <button type="button" data-msg="I'm a student writing a paper on aesthetics devices.">Student</button>
+          <button type="button" data-msg="Just curious what this is.">Curious</button>
+        </div>
+        <label class="check"><input type="checkbox" name="suppressed" /> Address previously opted out</label>
+      </form>
+      <div class="output">
+        <p class="panel-title mono">Trace</p>
+        <div data-out="lead-steps" set:html={renderSteps(l0.steps)} />
+        <div data-out="lead-outcome" aria-live="polite" set:html={renderOutcome(`${leadLabel[l0.route]} · score ${l0.score}`, l0.outcome, tone(l0.route))} />
+      </div>
+    </div>
+
+    <div class="s-grid reply-grid">
+      <div class="inputs">
+        <p class="panel-title mono">Then a reply comes back</p>
+        <div class="reply-list" role="radiogroup" aria-label="Pick a reply">
+          {REPLIES.map((r, i) => (
+            <label class="reply"><input type="radio" name="reply" value={r.id} checked={i === 0} /> <span>“{r.text}”</span></label>
+          ))}
+        </div>
+        <p class="tiny muted">The model's label and confidence here are fixed stand-ins, not a live model call.</p>
+      </div>
+      <div class="output">
+        <p class="panel-title mono">Trace</p>
+        <div data-out="reply-steps" set:html={renderSteps(r0.steps)} />
+        <div data-out="reply-outcome" aria-live="polite" set:html={renderOutcome(r0.action, r0.outcome, tone(r0.action))} />
+      </div>
+    </div>
+
+    <div class="s-foot">
+      <div><h3>Cost of a wrong call</h3><p>Emailing someone who opted out is a legal and trust problem. Sending a buyer a generic email instead of a person costs a deal. A wasted SDR task costs minutes.</p></div>
+      <div><h3>The tradeoff</h3><p>The opt-out rule is deliberately over-inclusive. “Don't email me, call instead” is treated as an opt-out. A lost lead costs less than an ignored opt-out.</p></div>
+      <div><h3>What could still fail</h3><p>A buyer who phrases intent as a question can be read as a question. That's why low confidence goes to a person, and why the eval grades actions, not just labels.</p></div>
+    </div>
+    <p class="s-link"><a class="arrow-link" href="https://github.com/vrutikadani/ai-sdr-agent" data-track="github_click" data-track-slug="ai-sdr-agent">The full agent, with 40 labeled test replies</a></p>
+  </section>
+
+  <!-- ============ 2. OWNER ============ -->
+  <section id="owner" class="wrap scenario" aria-labelledby="owner-h" data-scenario="owner">
+    <header class="s-head">
+      <p class="s-n mono">Scenario 2</p>
+      <h2 id="owner-h">Who owns this account?</h2>
+    </header>
+    <div class="lensed">
+      <p data-lens="business">Routing carries out a coverage policy that sales leaders agree on. When a lead lands with the wrong rep, it is usually a policy question nobody answered, not a bug.</p>
+      <p data-lens="product">Three rules protect trust: a rep's manual handoff is never overwritten, uncovered areas go to inside sales instead of a random default, and when nothing matches, the owner gets a task instead of a silent guess.</p>
+      <p data-lens="engineering">Territories are lookup tables (ZIP, then state), not branches. A territory change is a table edit. Lifecycle stages are forward-only. Port of <code>assignment.py</code>.</p>
+    </div>
+    <div class="s-grid">
+      <form class="inputs" data-form="owner">
+        <p class="panel-title mono">Inputs</p>
+        <label>Lifecycle stage
+          <select name="lifecycle"><option value="lead">Lead</option><option value="mql" selected>MQL</option><option value="sql">SQL</option></select>
+        </label>
+        <label>Specialty
+          <select name="specialty"><option>Dermatology</option><option>Plastic surgery</option><option selected>Med spa</option><option>Other medical</option></select>
+        </label>
+        <fieldset class="inline-radios"><legend>Has a medical director?</legend>
+          <label><input type="radio" name="medicalDirector" value="yes" /> Yes</label>
+          <label><input type="radio" name="medicalDirector" value="no" /> No</label>
+          <label><input type="radio" name="medicalDirector" value="blank" checked /> Blank</label>
+        </fieldset>
+        <label>ZIP code
+          <select name="zip">{Object.entries(ZIPS).map(([z, st]) => <option value={z} selected={z === '92801'}>{z} ({st})</option>)}</select>
+        </label>
+        <label class="check"><input type="checkbox" name="manualLock" /> A rep handed this record over by hand</label>
+        <label class="check"><input type="checkbox" name="customer" /> Already a customer</label>
+        <label class="check"><input type="checkbox" name="corporate" /> Corporate (multi-location) account</label>
+      </form>
+      <div class="output">
+        <p class="panel-title mono">Trace</p>
+        <div data-out="owner-steps" set:html={renderSteps(own0.steps)} />
+        <div data-out="owner-outcome" aria-live="polite" set:html={renderOutcome(own0.owner, own0.path, 'go')} />
+      </div>
+    </div>
+    <div class="s-foot">
+      <div><h3>Cost of a wrong call</h3><p>A lead with the wrong owner looks fine on a dashboard until the deal is lost. Overwriting a rep's handoff teaches reps to work around the system.</p></div>
+      <div><h3>The tradeoff</h3><p>Locking manual handoffs means a stale lock can keep a record with someone who left. That's caught by a periodic owner-status check, not by removing the lock.</p></div>
+      <div><h3>What could still fail</h3><p>Tables drift. Every hire or departure changes them, so keeping them current is a process problem as much as a technical one.</p></div>
+    </div>
+    <p class="s-link"><a class="arrow-link" href="https://github.com/vrutikadani/hubspot-revops-system" data-track="github_click" data-track-slug="hubspot-revops-system">Routing, lifecycle and approvals as tested Python</a></p>
+  </section>
+
+  <!-- ============ 3. SIGNAL ============ -->
+  <section id="signal" class="wrap scenario" aria-labelledby="signal-h" data-scenario="signal">
+    <header class="s-head">
+      <p class="s-n mono">Scenario 3</p>
+      <h2 id="signal-h">Should a seller act on this signal?</h2>
+    </header>
+    <div class="lensed">
+      <p data-lens="business">Seller attention is the scarce resource. A feed that sellers learn to ignore is worse than no feed. So the system sends fewer signals and explains everything it holds back.</p>
+      <p data-lens="product">Three separate questions: how strong is the change, how far can we trust the data, and can this owner act today? The default example is strong and trustworthy, and still suppressed, because a deal is already open.</p>
+      <p data-lens="engineering">Strength comes from three signal families. Confidence starts HIGH and is lowered with a reason. Actionability rules run in order and the first failure decides. The optional AI note runs after the decision and sees only aggregates. Port of <code>product-signal-router</code> v1.5.0.</p>
+    </div>
+    <div class="s-grid">
+      <form class="inputs" data-form="signal">
+        <p class="panel-title mono">Inputs</p>
+        <fieldset><legend>Signal families that fired</legend>
+          <label class="check"><input type="checkbox" name="usage" checked /> Usage grew fast</label>
+          <label class="check"><input type="checkbox" name="adoption" checked /> New users added</label>
+          <label class="check"><input type="checkbox" name="breadth" /> New features turned on</label>
+        </fieldset>
+        <fieldset><legend>Data quality</legend>
+          <label class="check"><input type="checkbox" name="partitionLoaded" checked /> Today's data is loaded</label>
+          <label class="check"><input type="checkbox" name="youngAccount" /> Account under 45 days old</label>
+          <label class="check"><input type="checkbox" name="oneUserHeavy" /> One user drives most usage</label>
+          <label class="check"><input type="checkbox" name="domainMatch" /> CRM matched by domain only</label>
+        </fieldset>
+        <fieldset><legend>CRM context</legend>
+          <label class="check"><input type="checkbox" name="identityUnique" checked /> Matches exactly one account</label>
+          <label class="check"><input type="checkbox" name="ownerActive" checked /> Owner is an active user</label>
+          <label class="check"><input type="checkbox" name="openOpp" checked /> Open opportunity exists</label>
+          <label class="check"><input type="checkbox" name="twoWayRecent" /> Two-way conversation in last 14 days</label>
+          <label class="check"><input type="checkbox" name="openSignal" /> Earlier signal still unanswered</label>
+        </fieldset>
+      </form>
+      <div class="output">
+        <p class="panel-title mono">Trace</p>
+        <div data-out="signal-steps" set:html={renderSteps(sig0.steps)} />
+        <div data-out="signal-outcome" aria-live="polite" set:html={renderOutcome(sig0.decision, sig0.why, tone(sig0.decision))} />
+      </div>
+    </div>
+    <div class="s-foot">
+      <div><h3>Cost of a wrong call</h3><p>A false alert costs a seller's time and, worse, their trust in the next alert. A missed signal is invisible unless you measure recall on purpose.</p></div>
+      <div><h3>The tradeoff</h3><p>Thresholds are starting points, not fitted values. Shipping them with a replay harness is more honest than shipping them as if they were measured.</p></div>
+      <div><h3>What could still fail</h3><p>An earlier version trusted medium confidence to stop bad signals. It didn't. Anything that must stop a signal is now a rule.</p></div>
+    </div>
+    <p class="s-link"><a class="arrow-link" href="https://vrutikadani.github.io/product-signal-router/" data-track="demo_launch" data-track-slug="product-signal-router">The full router, with a signal inspector</a></p>
+  </section>
+
+  <!-- ============ 4. WRONG ============ -->
+  <section id="wrong" class="wrap scenario" aria-labelledby="wrong-h" data-scenario="wrong">
+    <header class="s-head">
+      <p class="s-n mono">Scenario 4</p>
+      <h2 id="wrong-h">What happens when the system is wrong?</h2>
+    </header>
+    <div class="lensed">
+      <p data-lens="business">Systems will be wrong. What matters is whether a correction actually cleans up, or just stops the mistake from repeating while the CRM stays wrong.</p>
+      <p data-lens="product">The seller's correction has to be one click and has to be trusted. If the bad task stays in her queue after she says “wrong person,” she stops correcting.</p>
+      <p data-lens="engineering">Idempotency keys stop a write from happening twice. They do nothing about a write that should no longer exist. The fix maps each correction reason to the writes it invalidates and compensates against what the CRM actually holds.</p>
+    </div>
+    <div class="wrong-ui">
+      <div class="wrong-controls">
+        <fieldset class="inline-radios"><legend>Version</legend>
+          <label><input type="radio" name="fix" value="before" checked /> Before the fix</label>
+          <label><input type="radio" name="fix" value="after" /> After the fix</label>
+        </fieldset>
+        <div class="stepper" role="group" aria-label="Step through the sequence">
+          <button type="button" class="btn btn--ghost" data-step="-1">← Back</button>
+          <span class="mono" data-out="wrong-pos">Step 1 of 4</span>
+          <button type="button" class="btn" data-step="1">Next →</button>
+        </div>
+      </div>
+      <div data-out="wrong-frame" aria-live="polite" set:html={renderFrame(f0[0])} />
+    </div>
+    <div class="s-foot">
+      <div><h3>Cost of a wrong call</h3><p>A wrong association spreads: routing, reporting, the next rep who opens the record, other automations that read contacts by company.</p></div>
+      <div><h3>The tradeoff</h3><p>Compensation adds complexity to every write type. The alternative, wrong data that every dashboard reports as healthy, is worse.</p></div>
+      <div><h3>What could still fail</h3><p>A person may have edited the record by hand after the write. The compensating step reads the current state first for exactly that reason.</p></div>
+    </div>
+    <p class="s-link"><a class="arrow-link" href="https://github.com/vrutikadani/gtm-decision-engine/blob/main/docs/FAILURE_POSTMORTEM.md" data-track="github_click" data-track-slug="gtm-decision-engine">Read the full postmortem</a></p>
+  </section>
+
+  <!-- ============ 5. TRADEOFFS ============ -->
+  <section id="tradeoffs" class="wrap scenario" aria-labelledby="t-h" data-scenario="tradeoffs">
+    <header class="s-head">
+      <p class="s-n mono">Scenario 5 · Tradeoff explorer</p>
+      <h2 id="t-h">Where should the human review line sit?</h2>
+    </header>
+    <div class="lensed">
+      <p data-lens="business">Every agent has a confidence line. Above it, it acts alone. Below it, a person reviews. Move the line up and you pay in review time. Move it down and you pay in mistakes. Where it should sit depends on what a mistake costs you.</p>
+      <p data-lens="product">Review capacity is a real constraint. Past it, items wait, and a late review can be as bad as a wrong action. So the cheapest line on paper may not be the one your team can staff.</p>
+      <p data-lens="engineering">500 synthetic replies with a confidence score and a ground-truth flag, seeded so results repeat. Cost per day = reviewed items × review minutes + wrong automatic actions × wrong-action cost + overflow × half that cost.</p>
+    </div>
+    <p class="caveat mono">Illustrative numbers. Not measured from any real system.</p>
+    <div class="s-grid">
+      <form class="inputs" data-form="tradeoffs">
+        <p class="panel-title mono">Assumptions</p>
+        <label>Review threshold <output data-show="threshold">0.60</output>
+          <input type="range" name="threshold" min="0.3" max="0.96" step="0.02" value="0.6" />
+        </label>
+        <label>Replies per day <output data-show="perDay">120</output>
+          <input type="range" name="perDay" min="20" max="400" step="10" value="120" />
+        </label>
+        <label>Minutes to review one reply <output data-show="reviewMinutes">3</output>
+          <input type="range" name="reviewMinutes" min="1" max="10" step="1" value="3" />
+        </label>
+        <label>Cost of one wrong automatic action, in minutes of cleanup <output data-show="wrongCost">30</output>
+          <input type="range" name="wrongCost" min="5" max="240" step="5" value="30" />
+        </label>
+        <label>Reviews your team can do per day <output data-show="capacity">40</output>
+          <input type="range" name="capacity" min="5" max="200" step="5" value="40" />
+        </label>
+      </form>
+      <div class="output">
+        <p class="panel-title mono">Result per day</p>
+        <dl class="metrics" data-out="t-metrics">
+          <div><dt>Handled alone</dt><dd>{Math.round(t0.autoShare * 100)}%</dd></div>
+          <div><dt>Sent to review</dt><dd>{Math.round(t0.reviewPerDay)}</dd></div>
+          <div><dt>Wrong automatic actions</dt><dd>{t0.wrongAutoPerDay.toFixed(1)}</dd></div>
+          <div><dt>Over capacity</dt><dd>{Math.round(t0.overflow)}</dd></div>
+          <div><dt>Total cost</dt><dd>{Math.round(t0.dailyCost)} min</dd></div>
+        </dl>
+        <div data-out="t-chart" set:html={renderChart(curve(pop, costs0), costs0.threshold)} />
+      </div>
+    </div>
+  </section>
+</Base>
+
+<script>
+  import { scoreLead, handleReply, REPLIES } from '../lib/lab/lead';
+  import { assignOwner, type OwnerInput } from '../lib/lab/owner';
+  import { evaluateSignal, type SignalInput } from '../lib/lab/signal';
+  import { frames } from '../lib/lab/correction';
+  import { population, evaluate, curve } from '../lib/lab/tradeoff';
+  import { renderSteps, renderOutcome, renderFrame, renderChart } from '../lib/lab/render';
+  import { track } from '../lib/track';
+
+  const $ = <T extends Element = HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
+  const set = (key: string, html: string) => { $(`[data-out="${key}"]`).innerHTML = html; };
+  const tone = (d: string) => (['SURFACE', 'sdr', 'draft', 'handoff'].includes(d) ? 'go' : ['ROUTE', 'review'].includes(d) ? 'ask' : 'stop');
+  // Inputs update live; pressing Enter must never reload the page.
+  document.querySelectorAll('form[data-form]').forEach((f) => f.addEventListener('submit', (e) => e.preventDefault()));
+  const started = new Set<string>();
+  const begin = (id: string) => { if (!started.has(id)) { started.add(id); track('lab_scenario_started', { scenario: id }); } };
+  const done = (id: string) => track('lab_scenario_completed', { scenario: id });
+
+  // Lens is pure CSS (:has). Remember it per visit only.
+  try {
+    const saved = sessionStorage.getItem('lens');
+    if (saved) $<HTMLInputElement>(`#lens-${saved}`).checked = true;
+    document.querySelectorAll<HTMLInputElement>('input[name="lens"]').forEach((r) =>
+      r.addEventListener('change', () => sessionStorage.setItem('lens', r.value)));
+  } catch { /* storage blocked */ }
+
+  // 1. Lead
+  const leadForm = $<HTMLFormElement>('[data-form="lead"]');
+  const LABEL = { sdr: 'SDR task', draft: 'Agent sends one email', stop: 'Stop', suppressed: 'Suppressed' } as const;
+  const runLead = () => {
+    const f = new FormData(leadForm);
+    const r = scoreLead({ specialty: String(f.get('specialty')), email: String(f.get('email')), message: String(f.get('message')), suppressed: f.get('suppressed') === 'on' });
+    set('lead-steps', renderSteps(r.steps));
+    set('lead-outcome', renderOutcome(`${LABEL[r.route]} · score ${r.score}`, r.outcome, tone(r.route)));
+  };
+  leadForm.addEventListener('input', () => { begin('lead'); runLead(); });
+  leadForm.querySelectorAll<HTMLButtonElement>('[data-msg]').forEach((b) => b.addEventListener('click', () => {
+    leadForm.querySelector<HTMLTextAreaElement>('textarea')!.value = b.dataset.msg!; begin('lead'); runLead();
+  }));
+  document.querySelectorAll<HTMLInputElement>('input[name="reply"]').forEach((r) => r.addEventListener('change', () => {
+    const res = handleReply(REPLIES.find((x) => x.id === r.value)!);
+    set('reply-steps', renderSteps(res.steps));
+    set('reply-outcome', renderOutcome(res.action, res.outcome, tone(res.action)));
+    begin('lead'); done('lead');
+  }));
+
+  // 2. Owner
+  const ownerForm = $<HTMLFormElement>('[data-form="owner"]');
+  ownerForm.addEventListener('input', () => {
+    begin('owner');
+    const f = new FormData(ownerForm);
+    const input: OwnerInput = {
+      lifecycle: f.get('lifecycle') as OwnerInput['lifecycle'], specialty: f.get('specialty') as OwnerInput['specialty'],
+      medicalDirector: f.get('medicalDirector') as OwnerInput['medicalDirector'], zip: String(f.get('zip')),
+      manualLock: f.get('manualLock') === 'on', customer: f.get('customer') === 'on', corporate: f.get('corporate') === 'on', state: '',
+    };
+    const r = assignOwner(input);
+    set('owner-steps', renderSteps(r.steps));
+    set('owner-outcome', renderOutcome(r.owner, r.path, r.owner.includes('queue') ? 'ask' : 'go'));
+    done('owner');
+  });
+
+  // 3. Signal
+  const sigForm = $<HTMLFormElement>('[data-form="signal"]');
+  sigForm.addEventListener('input', () => {
+    begin('signal');
+    const f = new FormData(sigForm);
+    const keys: (keyof SignalInput)[] = ['usage', 'adoption', 'breadth', 'partitionLoaded', 'youngAccount', 'oneUserHeavy', 'domainMatch', 'identityUnique', 'ownerActive', 'openOpp', 'twoWayRecent', 'openSignal'];
+    const input = Object.fromEntries(keys.map((k) => [k, f.get(k) === 'on'])) as unknown as SignalInput;
+    const r = evaluateSignal(input);
+    set('signal-steps', renderSteps(r.steps));
+    set('signal-outcome', renderOutcome(r.decision, r.why, tone(r.decision)));
+    done('signal');
+  });
+
+  // 4. Wrong
+  let pos = 0;
+  const drawWrong = () => {
+    const fixed = $<HTMLInputElement>('input[name="fix"][value="after"]').checked;
+    const fs = frames(fixed);
+    pos = Math.max(0, Math.min(fs.length - 1, pos));
+    set('wrong-frame', renderFrame(fs[pos]));
+    $('[data-out="wrong-pos"]').textContent = `Step ${pos + 1} of ${fs.length}`;
+    if (pos === fs.length - 1) done('wrong');
+  };
+  document.querySelectorAll<HTMLButtonElement>('[data-step]').forEach((b) => b.addEventListener('click', () => {
+    begin('wrong'); pos += Number(b.dataset.step); drawWrong();
+  }));
+  document.querySelectorAll<HTMLInputElement>('input[name="fix"]').forEach((r) => r.addEventListener('change', () => { begin('wrong'); drawWrong(); }));
+
+  // 5. Tradeoffs
+  const tForm = $<HTMLFormElement>('[data-form="tradeoffs"]');
+  const pop = population();
+  let raf = 0;
+  tForm.addEventListener('input', () => {
+    begin('tradeoffs');
+    cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(() => {
+      const f = new FormData(tForm);
+      const c = { threshold: +f.get('threshold')!, perDay: +f.get('perDay')!, reviewMinutes: +f.get('reviewMinutes')!, wrongCost: +f.get('wrongCost')!, capacity: +f.get('capacity')! };
+      tForm.querySelectorAll<HTMLOutputElement>('output[data-show]').forEach((o) => {
+        const v = c[o.dataset.show as keyof typeof c]; o.textContent = o.dataset.show === 'threshold' ? v.toFixed(2) : String(v);
+      });
+      const r = evaluate(pop, c);
+      set('t-metrics', `
+        <div><dt>Handled alone</dt><dd>${Math.round(r.autoShare * 100)}%</dd></div>
+        <div><dt>Sent to review</dt><dd>${Math.round(r.reviewPerDay)}</dd></div>
+        <div><dt>Wrong automatic actions</dt><dd>${r.wrongAutoPerDay.toFixed(1)}</dd></div>
+        <div class="${r.overflow > 0 ? 'warn' : ''}"><dt>Over capacity</dt><dd>${Math.round(r.overflow)}</dd></div>
+        <div><dt>Total cost</dt><dd>${Math.round(r.dailyCost)} min</dd></div>`);
+      const { threshold, ...base } = c;
+      set('t-chart', renderChart(curve(pop, base), threshold));
+    });
+  });
+</script>
+
+<style>
+  .lab-head { padding-block: var(--space-xl) var(--space-m); }
+  .lab-head h1 { font-size: var(--step-4); font-weight: 450; letter-spacing: -0.02em; margin: var(--space-xs) 0 var(--space-s); max-width: 16ch; }
+  .lede { font-size: var(--step-1); color: var(--text-soft); }
+  .nowrap { white-space: nowrap; }
+  .nowrap .mark { margin-inline: 0.2em 0.25em; }
+  .head-tags { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+
+  .lab-bar { position: sticky; top: 4rem; z-index: 30; background: color-mix(in srgb, var(--surface) 94%, transparent); backdrop-filter: blur(6px); border-block: 1px solid var(--line); }
+  .bar-inner { display: flex; align-items: center; gap: var(--space-m); padding-block: 0.4rem; overflow-x: auto; }
+  .lens { display: flex; align-items: center; gap: 0.25rem; border: 0; padding: 0; margin: 0; flex: none; }
+  .lens legend { float: left; margin-right: 0.5rem; color: var(--text-muted); }
+  .lens label {
+    font-family: var(--font-mono); font-size: var(--step--1); cursor: pointer; border: 1px solid var(--line);
+    border-radius: 999px; padding: 0.4rem 0.75rem; min-height: 44px; display: inline-flex; align-items: center;
+  }
+  .lens input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .lens label:has(input:checked) { background: var(--text); color: var(--surface); border-color: var(--text); }
+  .lens label:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .scen-nav { display: flex; gap: var(--space-s); }
+  .scen-nav a { font-size: 0.95rem; text-decoration: none; white-space: nowrap; padding-block: 0.6rem; color: var(--text-soft); }
+  .scen-nav a:hover { color: var(--text); text-decoration: underline; }
+  @media (max-width: 70rem) { .sn-q { display: none; } .scen-nav a .mono::before { content: '#'; } }
+
+  .scenario { padding-block: var(--space-2xl) var(--space-l); scroll-margin-top: 8rem; border-bottom: 1px solid var(--line); }
+  .s-head h2 { font-size: var(--step-3); margin: 0.3rem 0 var(--space-s); }
+  .s-n { color: var(--person); margin: 0; }
+  .lensed { max-width: var(--measure); min-height: 4.5em; }
+  .lensed p { font-size: var(--step-1); color: var(--text-soft); line-height: 1.4; }
+  .lensed code { font-family: var(--font-mono); font-size: 0.8em; background: var(--surface-sunken); padding: 0.05em 0.3em; }
+  /* Lens switch: pure CSS, works without JavaScript. */
+  [data-lens='product'], [data-lens='engineering'] { display: none; }
+  :global(body:has(#lens-product:checked)) [data-lens='business'],
+  :global(body:has(#lens-engineering:checked)) [data-lens='business'] { display: none; }
+  :global(body:has(#lens-product:checked)) [data-lens='product'],
+  :global(body:has(#lens-engineering:checked)) [data-lens='engineering'] { display: block; }
+  :global([data-lens-only='engineering']) { display: none; }
+  :global(body:has(#lens-engineering:checked) [data-lens-only='engineering']) { display: block; }
+
+  .s-grid { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: var(--space-m); margin-top: var(--space-m); }
+  .reply-grid { margin-top: var(--space-l); }
+  .inputs, .output { background: var(--surface-raised); border: 1px solid var(--line); border-radius: var(--radius-m); padding: var(--space-m); min-width: 0; }
+  .panel-title { margin: 0 0 var(--space-xs); color: var(--text-muted); }
+  .inputs label { display: grid; gap: 0.3rem; margin-bottom: var(--space-s); font-size: 1rem; }
+  .inputs select, .inputs input[type='email'], .inputs textarea {
+    min-height: 44px; padding: 0.5rem 0.65rem; border: 1px solid var(--line); border-radius: var(--radius-s);
+    background: var(--surface); font-size: 1rem; width: 100%;
+  }
+  .inputs textarea { resize: vertical; font-family: var(--font-serif); }
+  .inputs fieldset { border: 0; padding: 0; margin: 0 0 var(--space-s); }
+  .inputs legend { font-size: 1rem; margin-bottom: 0.3rem; font-weight: 550; }
+  label.check { display: flex !important; align-items: center; gap: 0.55rem; margin-bottom: 0.2rem !important; min-height: 40px; }
+  label.check input, .inline-radios input, .reply input { width: 1.1rem; height: 1.1rem; accent-color: var(--text); flex: none; }
+  .inline-radios { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; }
+  .inline-radios legend { width: 100%; }
+  .inline-radios label { display: inline-flex !important; align-items: center; gap: 0.4rem; min-height: 40px; margin: 0 !important; }
+  .presets { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: -0.4rem 0 var(--space-s); }
+  .presets button {
+    font-family: var(--font-mono); font-size: 0.8rem; min-height: 40px; padding: 0.3rem 0.7rem; cursor: pointer;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 999px;
+  }
+  .presets button:hover { border-color: var(--text); }
+  .reply-list { display: grid; gap: 0.3rem; }
+  .reply { display: flex !important; align-items: flex-start; gap: 0.55rem; margin: 0 !important; padding: 0.45rem 0; cursor: pointer; }
+  .reply input { margin-top: 0.35rem; }
+  .tiny { font-size: 0.9rem; margin: var(--space-xs) 0 0; }
+
+  .output :global(.trace) { list-style: none; margin: 0 0 var(--space-s); padding: 0; }
+  .output :global(.t) {
+    display: grid; grid-template-columns: auto 4.2rem minmax(0, 1fr) auto; gap: 0.6rem; align-items: baseline;
+    padding: 0.5rem 0; border-bottom: 1px dashed var(--line); font-size: 0.98rem;
+  }
+  .output :global(.t .mark) { transform: translateY(0.05em); }
+  .output :global(.t-who) { font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); }
+  .output :global(.t-delta) { font-family: var(--font-mono); font-size: 0.85rem; }
+  .output :global(.t--block) { color: var(--text); }
+  .output :global(.t-flag) { font-family: var(--font-mono); font-style: normal; font-size: 0.72rem; color: var(--person); border: 1px solid currentColor; border-radius: 999px; padding: 0 0.4em; margin-left: 0.3em; white-space: nowrap; }
+  .output :global(.t-code) { font-family: var(--font-mono); font-size: 0.75rem; color: var(--rules); margin-top: 0.2rem; }
+  .output :global(.outcome) { border-left: 3px solid var(--rules); padding: 0.6rem 0.9rem; background: var(--surface); border-radius: 0 var(--radius-s) var(--radius-s) 0; }
+  .output :global(.outcome--stop) { border-color: var(--text-muted); }
+  .output :global(.outcome--ask) { border-color: var(--person); }
+  .output :global(.o-label) { font-family: var(--font-mono); font-size: var(--step--1); font-weight: 600; margin: 0 0 0.2rem; }
+  .output :global(.o-text) { margin: 0; }
+
+  .s-foot { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-m); margin-top: var(--space-l); }
+  .s-foot h3 { font-family: var(--font-mono); font-size: var(--step--1); font-weight: 500; color: var(--text-muted); margin-bottom: 0.4rem; }
+  .s-foot p { font-size: 1rem; }
+  .s-link { margin-top: var(--space-s); }
+
+  .wrong-ui { margin-top: var(--space-m); background: var(--surface-raised); border: 1px solid var(--line); border-radius: var(--radius-m); padding: var(--space-m); }
+  .wrong-controls { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--space-s); margin-bottom: var(--space-s); }
+  .wrong-controls fieldset { border: 0; padding: 0; margin: 0; }
+  .wrong-controls legend { font-family: var(--font-mono); font-size: var(--step--1); color: var(--text-muted); }
+  .stepper { display: flex; align-items: center; gap: var(--space-xs); }
+  .wrong-ui :global(.f-title) { font-weight: 600; display: flex; align-items: center; gap: 0.5rem; }
+  .wrong-ui :global(.crm) { width: 100%; border-collapse: collapse; font-size: 0.92rem; margin-top: var(--space-xs); }
+  .wrong-ui :global(.crm caption) { text-align: left; font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-muted); padding-bottom: 0.3rem; }
+  .wrong-ui :global(.crm th), .wrong-ui :global(.crm td) { text-align: left; padding: 0.45rem 0.6rem 0.45rem 0; border-bottom: 1px solid var(--line); }
+  .wrong-ui :global(.crm th) { font-family: var(--font-mono); font-size: 0.75rem; font-weight: 500; color: var(--text-muted); }
+  .wrong-ui :global(.crm-live td:last-child) { color: var(--person); font-weight: 600; }
+  .wrong-ui :global(.crm-reverted td) { text-decoration: line-through; color: var(--text-muted); }
+  .wrong-ui :global(.crm-reverted td:last-child) { text-decoration: none; color: var(--rules); font-weight: 600; }
+
+  .caveat { color: var(--person); margin-top: var(--space-xs); }
+  input[type='range'] { width: 100%; accent-color: var(--text); min-height: 32px; }
+  .inputs output { font-family: var(--font-mono); font-weight: 600; }
+  .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); gap: var(--space-xs); margin: 0 0 var(--space-s); }
+  .metrics :global(div) { border-top: 1px solid var(--line); padding-top: 0.4rem; }
+  .metrics :global(dt) { font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); }
+  .metrics :global(dd) { margin: 0.15rem 0 0; font-size: var(--step-1); font-variant-numeric: tabular-nums; }
+  .metrics :global(.warn dd) { color: var(--person); }
+  .output :global(.chart) { width: 100%; height: auto; }
+  .output :global(.chart .axis) { stroke: var(--line); }
+  .output :global(.chart .line) { fill: none; stroke: var(--text); stroke-width: 2; }
+  .output :global(.chart .best) { fill: var(--model); }
+  .output :global(.chart .cur) { stroke: var(--person); stroke-dasharray: 3 4; }
+  .output :global(.chart .curdot) { fill: var(--person); }
+  .output :global(.chart .tick) { font-family: var(--font-mono); font-size: 11px; fill: var(--text-muted); }
+  .output :global(.chart .note) { font-family: var(--font-serif); font-style: italic; font-size: 13px; fill: var(--text-soft); }
+
+  @media (max-width: 52rem) {
+    .s-grid, .s-foot { grid-template-columns: 1fr; }
+    .output :global(.t) { grid-template-columns: auto minmax(0, 1fr) auto; }
+    .output :global(.t-who) { display: none; }
+  }
+</style>

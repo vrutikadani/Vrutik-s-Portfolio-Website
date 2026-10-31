@@ -1,0 +1,83 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import EvidenceTag from '../../components/EvidenceTag.astro';
+
+const all = (await getCollection('systems')).sort((a, b) => a.data.order - b.data.order);
+const run = all.filter((s) => s.data.evidence.includes('verified-work') || s.data.evidence.includes('firsthand'));
+const builds = all.filter((s) => !run.includes(s));
+const groups = [
+  { id: 'run', title: 'Systems I run at work', note: 'Company systems. The code is private; each page links a public rebuild on synthetic data.', items: run },
+  { id: 'builds', title: 'Public builds you can run', note: 'Reference implementations and hiring cases. Clone them, read the tests, break them.', items: builds },
+];
+---
+<Base
+  title="Systems"
+  description="AI agents, revenue systems and finance controls Vrutik Adani has built, each with a 30-second summary, the key decision, and what failed."
+  crumbs={[{ name: 'Systems', href: '/systems/' }]}
+  pivot="Every system page opens with a 30-second summary. Use the Product, Engineering and Business links to go deeper in the view you care about."
+>
+  <header class="wrap page-head">
+    <p class="eyebrow">Systems</p>
+    <h1>What I've built, and the one decision behind each.</h1>
+    <p class="lede measure">
+      Every page starts with a 30-second summary: the problem, the decision, the result, and why it was
+      interesting. Below that it splits into product, engineering and business views. Each page also says
+      what I owned, what others owned, and what kind of evidence sits behind it.
+    </p>
+  </header>
+
+  {groups.map((g) => (
+    <section class="wrap group" aria-labelledby={g.id}>
+      <div class="group-head">
+        <h2 id={g.id}>{g.title}</h2>
+        <p class="muted">{g.note}</p>
+      </div>
+      <ul class="index">
+        {g.items.map((s) => (
+          <li class="row">
+            <p class="kind mono">{s.data.kind}</p>
+            <div class="main">
+              <h3><a href={`/systems/${s.id}/`} data-track="project_open" data-track-slug={s.id}>{s.data.title}</a></h3>
+              <p class="premise">{s.data.premise}</p>
+              <p class="ctx mono muted">{s.data.context}</p>
+            </div>
+            <div class="side">
+              <div class="tags">{s.data.evidence.map((e) => <EvidenceTag kind={e} />)}</div>
+              <p class="mono links">
+                <a href={`/systems/${s.id}/`}>Read</a>
+                {s.data.links.repo && <a href={s.data.links.repo} data-track="github_click" data-track-slug={s.id}>Code</a>}
+                {s.data.links.demo && <a href={s.data.links.demo} data-track="demo_launch" data-track-slug={s.id}>Live demo</a>}
+              </p>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
+  ))}
+</Base>
+
+<style>
+  .page-head { padding-block: var(--space-xl) var(--space-l); }
+  .page-head h1 { font-size: var(--step-4); font-weight: 450; max-width: 18ch; margin: var(--space-xs) 0 var(--space-m); letter-spacing: -0.02em; }
+  .lede { font-size: var(--step-1); color: var(--text-soft); }
+  .group { padding-block: var(--space-l); }
+  .group-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: var(--space-xs) var(--space-l); margin-bottom: var(--space-s); }
+  .group-head h2 { font-size: var(--step-2); }
+  .group-head p { margin: 0; font-size: 1rem; max-width: 52ch; }
+  .index { list-style: none; padding: 0; margin: 0; border-top: 1px solid var(--text); }
+  .row { display: grid; grid-template-columns: 9rem minmax(0, 1fr) minmax(0, 16rem); gap: var(--space-m); padding-block: var(--space-m); border-bottom: 1px solid var(--line); }
+  .kind { color: var(--person); padding-top: 0.45rem; margin: 0; }
+  h3 { font-size: var(--step-2); }
+  h3 a { text-decoration: none; }
+  h3 a:hover { text-decoration: underline; text-decoration-color: var(--person); }
+  .premise { font-style: italic; color: var(--text-soft); margin: 0.4rem 0 0.4rem; font-size: var(--step-1); }
+  .ctx { margin: 0; }
+  .tags { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: var(--space-xs); }
+  .links { display: flex; gap: var(--space-s); margin: 0; }
+  .links a { display: inline-block; padding-block: 0.6rem; }
+  @media (max-width: 50rem) {
+    .row { grid-template-columns: 1fr; gap: var(--space-xs); }
+    .kind { padding-top: 0; }
+  }
+</style>

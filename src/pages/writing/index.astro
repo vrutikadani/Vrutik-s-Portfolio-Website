@@ -1,0 +1,53 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import { SITE } from '../../site.config';
+import { readingMinutes } from '../../lib/reading';
+
+const posts = (await getCollection('writing', ({ data }) => SITE.showDrafts || !data.draft))
+  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+const fmt = (d: Date) => d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+---
+<Base
+  title="Writing"
+  description="Field notes and essays by Vrutik Adani on AI agents, CRM architecture, lead routing and revenue systems, written from systems he builds and runs."
+  crumbs={[{ name: 'Writing', href: '/writing/' }]}
+  noindex={posts.length === 0}
+  pivot="Each piece comes from a system I built. The kind label tells you what you're opening: an essay, a field note, or a teardown of a failure."
+>
+  <header class="wrap head">
+    <p class="eyebrow">Writing</p>
+    <h1>Field notes from building revenue systems.</h1>
+    <p class="lede measure">Short pieces about real decisions: where the model stops, what broke, and the rule I took away. No hot takes I can't back with something I built.</p>
+  </header>
+  <section class="wrap">
+    {posts.length === 0 ? (
+      <p class="muted">The first pieces are in review. Meanwhile, the <a href="/systems/">systems pages</a> carry the same ideas in depth.</p>
+    ) : (
+      <ol class="list">
+        {posts.map((p) => (
+          <li>
+            <p class="meta mono muted">
+              <span class="kind">{p.data.kind}</span> · <time datetime={p.data.date.toISOString()}>{fmt(p.data.date)}</time> · {readingMinutes(p.body ?? '')} min read{p.data.draft && <> · <span class="draft">draft</span></>}
+            </p>
+            <h2><a href={`/writing/${p.id}/`} data-track="article_open" data-track-slug={p.id}>{p.data.title}</a></h2>
+            <p class="desc">{p.data.description}</p>
+          </li>
+        ))}
+      </ol>
+    )}
+  </section>
+</Base>
+<style>
+  .head { padding-block: var(--space-xl) var(--space-l); }
+  .head h1 { font-size: var(--step-4); font-weight: 450; letter-spacing: -0.02em; margin: var(--space-xs) 0 var(--space-s); max-width: 18ch; }
+  .lede { font-size: var(--step-1); color: var(--text-soft); }
+  .list { list-style: none; padding: 0; margin: 0; border-top: 1px solid var(--text); }
+  .list li { padding-block: var(--space-m); border-bottom: 1px solid var(--line); max-width: 52rem; }
+  .list h2 { font-size: var(--step-2); margin: 0.35rem 0 0.4rem; }
+  .list h2 a { text-decoration: none; }
+  .list h2 a:hover { text-decoration: underline; text-decoration-color: var(--person); }
+  .desc { color: var(--text-soft); margin: 0; }
+  .kind { color: var(--person); }
+  .draft { border: 1px solid currentColor; border-radius: 999px; padding: 0 0.4em; }
+</style>

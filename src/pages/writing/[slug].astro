@@ -1,0 +1,74 @@
+---
+import { getCollection, getEntry, render } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import { SITE } from '../../site.config';
+import { readingMinutes } from '../../lib/reading';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('writing', ({ data }) => SITE.showDrafts || !data.draft);
+  return posts.map((post) => ({ params: { slug: post.id }, props: { post } }));
+}
+const { post } = Astro.props;
+const { Content } = await render(post);
+const d = post.data;
+const related = (await Promise.all(d.related.map((id) => getEntry('systems', id)))).filter(Boolean);
+const fmt = (x: Date) => x.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+const url = new URL(`/writing/${post.id}/`, Astro.site).href;
+
+const ld = [{
+  '@context': 'https://schema.org', '@type': 'BlogPosting', headline: d.title, description: d.description,
+  datePublished: d.date.toISOString(), dateModified: (d.updated ?? d.date).toISOString(),
+  author: { '@type': 'Person', name: SITE.name, url: Astro.site?.href }, mainEntityOfPage: url,
+  keywords: d.topics.join(', '),
+}];
+---
+<Base
+  title={d.title}
+  description={d.description}
+  type="article"
+  published={d.date}
+  jsonLd={ld}
+  noindex={d.draft}
+  crumbs={[{ name: 'Writing', href: '/writing/' }, { name: d.title, href: `/writing/${post.id}/` }]}
+  pivot={related.length ? `This piece comes from a real system. The related system page has the full product, engineering and business story.` : undefined}
+>
+  <article class="wrap post">
+    {d.draft && <p class="draft-banner mono" role="note">Draft for review. Not published. Hidden from search engines and from the live build.</p>}
+    <header class="post-head">
+      <p class="meta mono muted"><span class="kind">{d.kind}</span> · <time datetime={d.date.toISOString()}>{fmt(d.date)}</time> · {readingMinutes(post.body ?? '')} min read</p>
+      <h1>{d.title}</h1>
+      <p class="desc">{d.description}</p>
+    </header>
+    <div class="prose">
+      <Content />
+    </div>
+    <footer class="post-foot">
+      {related.length > 0 && (
+        <div>
+          <p class="mono muted">The system behind this</p>
+          <ul>{related.map((s) => s && <li><a href={`/systems/${s.id}/`}>{s.data.title}</a></li>)}</ul>
+        </div>
+      )}
+      <div>
+        <p class="mono muted">Talk about it</p>
+        <p><a href={SITE.links.linkedin} data-track="linkedin_click" data-track-where="article" data-track-slug={post.id}>Continue the discussion on LinkedIn</a></p>
+        <p>
+          <a href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`} data-track="article_share" data-track-slug={post.id}>Share this piece on LinkedIn</a>
+        </p>
+      </div>
+    </footer>
+  </article>
+</Base>
+<style>
+  .post { padding-top: var(--space-xl); }
+  .draft-banner { background: var(--surface-sunken); border: 1px dashed var(--person); color: var(--text); padding: 0.6rem 0.9rem; border-radius: var(--radius-s); max-width: var(--measure); }
+  .post-head { max-width: 46rem; margin-bottom: var(--space-l); }
+  .post-head h1 { font-size: var(--step-4); font-weight: 450; letter-spacing: -0.02em; margin: var(--space-xs) 0 var(--space-s); }
+  .desc { font-size: var(--step-1); color: var(--text-soft); font-style: italic; }
+  .kind { color: var(--person); }
+  .prose { font-size: var(--step-0); }
+  .post-foot { max-width: var(--measure); margin-top: var(--space-xl); border-top: 1px solid var(--text); padding-top: var(--space-m); display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-m); }
+  .post-foot ul { padding-left: 1.1rem; margin: 0.4rem 0 0; }
+  .post-foot p { margin-bottom: 0.4rem; }
+  @media (max-width: 40rem) { .post-foot { grid-template-columns: 1fr; } }
+</style>

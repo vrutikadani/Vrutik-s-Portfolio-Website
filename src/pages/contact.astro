@@ -1,0 +1,64 @@
+---
+import Base from '../layouts/Base.astro';
+import { SITE } from '../site.config';
+
+const mail = (subject: string) => SITE.email ? `mailto:${SITE.email}?subject=${encodeURIComponent(subject)}` : '';
+const intents = [
+  { id: 'hiring', title: 'You are hiring', body: 'For GTM engineering, revenue systems, or a technical product role around AI and revenue platforms. Send the role and what the first 90 days look like.', subject: 'Role: ', event: 'contact_click' },
+  { id: 'build', title: 'You are building something', body: 'A routing mess, an agent that needs a decision boundary, a comp model nobody trusts. Tell me the problem, not the tool.', subject: 'Building: ', event: 'contact_click' },
+  { id: 'speaking', title: 'You run an event or a community', body: 'A talk, a panel, mentoring, or judging. Include the audience and the date.', subject: 'Speaking: ', event: 'speaking_inquiry' },
+  { id: 'hello', title: 'You just want to talk shop', body: 'Read something here you disagree with? Even better.', subject: 'Hello', event: 'contact_click' },
+];
+---
+<Base
+  title="Contact"
+  description="How to reach Vrutik Adani about GTM systems and AI roles, building revenue systems, speaking, or mentoring."
+  crumbs={[{ name: 'Contact', href: '/contact/' }]}
+  pivot="Pick the closest reason below. Each one opens the right channel."
+>
+  <header class="wrap head">
+    <p class="eyebrow">Contact</p>
+    <h1>Start a conversation.</h1>
+    <p class="lede measure">
+      Email me at <a href={`mailto:${SITE.email}`} data-track="contact_click" data-track-channel="email">{SITE.email}</a>
+      or send a LinkedIn message. A line about why you're writing helps me answer well.
+    </p>
+  </header>
+
+  <section class="wrap">
+    <ul class="intents">
+      {intents.map((i) => (
+        <li id={i.id}>
+          <h2>{i.title}</h2>
+          <p>{i.body}</p>
+          <p class="actions">
+            <a class="btn" href={SITE.links.linkedin} rel="noopener" data-track={i.event} data-track-intent={i.id} data-track-channel="linkedin">Message on LinkedIn</a>
+            {SITE.email && <a class="btn btn--ghost" href={mail(i.subject)} data-track={i.event} data-track-intent={i.id} data-track-channel="email">Email</a>}
+            {i.id === 'hiring' && <a class="btn btn--ghost" href="/resume.pdf" data-track="resume_download" data-track-where="contact">Resume (PDF)</a>}
+          </p>
+        </li>
+      ))}
+    </ul>
+    <p class="privacy muted measure">
+      There is no form on this site, so nothing you write is stored here. Analytics on this site count page
+      visits and clicks only, never message content.
+    </p>
+  </section>
+</Base>
+<style>
+  .head { padding-block: var(--space-xl) var(--space-l); }
+  .head h1 { font-size: var(--step-4); font-weight: 450; letter-spacing: -0.02em; margin: var(--space-xs) 0 var(--space-s); }
+  .lede { font-size: var(--step-1); color: var(--text-soft); }
+  .intents { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; border-top: 1px solid var(--text); }
+  .intents li { padding: var(--space-m) var(--space-m) var(--space-m) 0; border-bottom: 1px solid var(--line); scroll-margin-top: 6rem; }
+  .intents li:nth-child(odd) { border-right: 1px solid var(--line); }
+  .intents li:nth-child(even) { padding-left: var(--space-m); }
+  .intents li:target h2 { text-decoration: underline; text-decoration-color: var(--person); }
+  .intents h2 { font-size: var(--step-2); margin-bottom: var(--space-xs); }
+  .actions { display: flex; flex-wrap: wrap; gap: var(--space-xs); margin: 0; }
+  .privacy { margin-top: var(--space-l); font-size: 1rem; }
+  @media (max-width: 44rem) {
+    .intents { grid-template-columns: 1fr; }
+    .intents li, .intents li:nth-child(even) { padding-left: 0; border-right: 0; }
+  }
+</style>

@@ -1,0 +1,214 @@
+---
+import Base from '../layouts/Base.astro';
+import { SITE } from '../site.config';
+import { EVIDENCE_INFO } from '../lib/evidence';
+
+const experience = [
+  {
+    when: 'Sep 2024 – now', org: 'Geneo United, a Lumenis company', where: 'Medical aesthetics, US',
+    role: 'GTM Systems & AI Engineering, Technical Product & Revenue Systems',
+    did: [
+      'Own lead routing, territories and lifecycle across HubSpot and Salesforce; owned the company side of the HubSpot-to-Salesforce migration.',
+      'Own quarterly commission calculation and reconciliation for roughly 30 sellers and leaders.',
+      'Built the AI first-touch sales agent, an AR case-intake agent for Finance, and data-quality custom code.',
+      'Build board and CFO materials: the weekly board funnel deck, quarterly business reviews and operating-plan models.',
+      'Lead one direct report; led two interns. Run HubSpot training for sales teams and new hires.',
+    ],
+  },
+  {
+    when: 'Aug 2022 – May 2024', org: 'Arizona State University', where: 'Tempe, AZ',
+    role: 'Graduate Teaching Assistant',
+    did: ['Taught and mentored 150+ Information Technology students.'],
+  },
+  {
+    when: 'May – Aug 2023', org: 'Arizona State University', where: 'Tempe, AZ',
+    role: 'Technology Consultant',
+    did: ['Built a Python ETL pipeline between Canvas LMS and Salesforce, ran a five-year data audit, and trained 20+ staff.'],
+  },
+  {
+    when: 'Oct 2021 – Aug 2022', org: 'Leap.club (Konflake Tech)', where: 'India',
+    role: 'Associate Product Manager',
+    did: [
+      'Took a paid professional-networking app from user interviews to an MVP in about three months, across 10 core features.',
+      'Shipped member discovery and ran onboarding, engagement and retention experiments.',
+    ],
+  },
+  {
+    when: 'Jan – Jun 2022', org: 'Mastek Enterprise Solutions', where: 'India',
+    role: 'Functional Consultant Intern',
+    did: ['Supported an Oracle HCM Cloud implementation with HR process changes and SQL reporting.'],
+  },
+  {
+    when: 'Oct 2020 – Mar 2021', org: 'Uplara Inc.', where: 'Remote',
+    role: 'Data Analyst Intern',
+    did: ['Quality-checked 2.5M image records for a size-recommendation and virtual try-on model.'],
+  },
+];
+
+const profile = {
+  '@context': 'https://schema.org', '@type': 'ProfilePage',
+  mainEntity: {
+    '@type': 'Person', name: SITE.name, description: SITE.description, url: Astro.site?.href,
+    sameAs: [SITE.links.linkedin, SITE.links.github],
+    alumniOf: [{ '@type': 'CollegeOrUniversity', name: 'Arizona State University' }, { '@type': 'CollegeOrUniversity', name: 'University of Mumbai' }],
+    hasCredential: [
+      { '@type': 'EducationalOccupationalCredential', name: 'Salesforce Certified Business Analyst' },
+      { '@type': 'EducationalOccupationalCredential', name: 'Tableau Desktop Specialist' },
+    ],
+  },
+};
+---
+<Base
+  title="About"
+  description="Vrutik Adani builds the commercial systems a sales team runs on: CRM and routing, commissions, board reporting and AI agents. Experience, education, recognition and how to read the evidence on this site."
+  type="profile"
+  jsonLd={[profile]}
+  crumbs={[{ name: 'About', href: '/about/' }]}
+  pivot="Looking for dates and roles? Jump to Experience. Wondering what the little evidence labels mean? That's at the bottom."
+>
+  <header class="wrap about-head">
+    <p class="eyebrow">About</p>
+    <h1>I joined to clean up CRM data. I stayed to run the systems.</h1>
+  </header>
+
+  <section class="wrap story">
+    <div class="prose">
+      <p class="big">
+        I build systems that connect GTM data, decisions and AI-driven action.
+      </p>
+      <p>
+        At Geneo United, a Lumenis company in medical aesthetics, I started on CRM cleanup and reporting.
+        Two years later I own most of the commercial plumbing: HubSpot and Salesforce, lead routing and
+        territories, the commission model for our sales team, the weekly board deck, and the planning models behind it.
+      </p>
+      <p>
+        I like problems where the data, the money and the workflow all meet. An AI agent that drafts and classifies
+        emails while routing stays in plain code. A weekly job that decides which practices appear on a public
+        provider map. A commission model where every rate lives in one place and every payout ties back to a deal.
+      </p>
+      <p>
+        Most RevOps engineers don't build the operating plan. Most finance analysts don't write CRM custom code.
+        I do both, for the same company, and I think that's where the useful work is.
+      </p>
+      <p>
+        Before that I took a consumer app from interviews to MVP at Leap.club, supported an Oracle HCM rollout at
+        Mastek, and earned an M.S. in Information Technology at Arizona State, where I also taught.
+      </p>
+    </div>
+    <aside class="principles" aria-labelledby="how">
+      <h2 id="how" class="eyebrow">How I work</h2>
+      <ol>
+        <li><b>Decisions about money, ownership and eligibility stay in code.</b> The model handles language.</li>
+        <li><b>A person goes first.</b> New automation runs in draft or dry-run mode until it earns trust.</li>
+        <li><b>Policy before workflow.</b> If a rule isn't decided, I write the question down for the person who owns it.</li>
+        <li><b>Build for audit.</b> Every number should trace back to a record and a rule.</li>
+        <li><b>Say what isn't measured.</b> An honest gap beats a confident guess.</li>
+      </ol>
+    </aside>
+  </section>
+
+  <section id="experience" class="wrap block" aria-labelledby="exp-h">
+    <div class="exp-head">
+      <h2 id="exp-h" class="block-h">Experience</h2>
+      <a class="btn btn--ghost" href="/resume.pdf" data-track="resume_download" data-track-where="about">Resume (PDF)</a>
+    </div>
+    <ol class="records">
+      {experience.map((e) => (
+        <li class="record">
+          <p class="when mono">{e.when}</p>
+          <div>
+            <h3>{e.role}</h3>
+            <p class="org">{e.org} <span class="muted">· {e.where}</span></p>
+            <ul>{e.did.map((x) => <li>{x}</li>)}</ul>
+          </div>
+        </li>
+      ))}
+    </ol>
+  </section>
+
+  <section class="wrap block two" aria-labelledby="edu-h">
+    <div>
+      <h2 id="edu-h" class="block-h">Education</h2>
+      <ul class="plain">
+        <li><b>M.S. Information Technology</b> (Information Systems Management), Arizona State University, 2024. GPA 4.00.</li>
+        <li><b>B.E. Information Technology</b>, University of Mumbai, 2022.</li>
+        <li><b>Certifications:</b> Salesforce Certified Business Analyst; Tableau Desktop Specialist.</li>
+      </ul>
+      <h2 class="block-h sub">Publication</h2>
+      <p class="cite">
+        Raval, P., Shah, R., <b>Adani, V.</b>, Rodrigues, L., &amp; Jadhav, V. (2023). “Fashion Intelligence:
+        An Artificial Intelligence-Based Clothing Fashion Stylist.” In <i>Practical Data Mining Techniques and Applications</i>.
+        Auerbach Publications / Taylor &amp; Francis. eBook ISBN 9781003390220.
+      </p>
+    </div>
+    <div>
+      <h2 class="block-h">Recognition</h2>
+      <ul class="plain">
+        <li><b>Core Value Rockstar award, “Data Drives Decisions”</b>, Oct 2026. Nominated by sales leaders for consumables and customer-purchasing dashboards.</li>
+        <li><b>Core Value Rockstar award, “Execution is Expected”</b>, Jan 2026. For restructuring sales territories against a deadline, including a 10-hour weekend.</li>
+        <li><b>Presidential Award, “Execution is Expected”</b>, Jan 2025. Presented by the President at the National Sales Meeting.</li>
+        <li><b>Product Hunt Golden Kitty Awards 2021</b>: winner, Diversity &amp; Inclusion Product of the Year, with the Leap.club team.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="evidence" class="wrap block evidence" aria-labelledby="ev-h">
+    <h2 id="ev-h" class="block-h">How to read the claims on this site</h2>
+    <p class="measure">
+      Every system page carries one or more labels saying what kind of proof is behind it. I would rather you
+      know exactly what you're looking at than assume more. Company numbers describe the business I work in,
+      never my personal output, and plans or forecasts are never shown as results.
+    </p>
+    <dl class="ev-list">
+      {Object.entries(EVIDENCE_INFO).map(([k, v]) => (
+        <div id={`ev-${k}`}>
+          <dt><span aria-hidden="true" class="g">{v.glyph}</span> {v.label}</dt>
+          <dd>{v.meaning}</dd>
+        </div>
+      ))}
+    </dl>
+  </section>
+
+  <section class="wrap closing">
+    <p>Want to compare notes on a system you're building?</p>
+    <a class="btn" href="/contact/" data-track="contact_click" data-track-where="about">Start a conversation</a>
+  </section>
+</Base>
+
+<style>
+  .about-head { padding-block: var(--space-xl) var(--space-l); }
+  .about-head h1 { font-size: var(--step-4); font-weight: 450; letter-spacing: -0.02em; margin-top: var(--space-xs); max-width: 20ch; }
+  .story { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: var(--space-xl); align-items: start; }
+  .big { font-size: var(--step-2); line-height: 1.25; font-style: italic; }
+  .principles { border-top: 1px solid var(--text); padding-top: var(--space-s); }
+  .principles ol { padding-left: 1.2rem; margin: var(--space-s) 0 0; display: grid; gap: var(--space-s); }
+  .principles li { font-size: 1.02rem; }
+  .block { padding-top: var(--space-2xl); }
+  .block-h { font-size: var(--step-3); margin-bottom: var(--space-m); }
+  .exp-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: var(--space-s); }
+  .block-h.sub { font-size: var(--step-2); margin-top: var(--space-l); }
+  .records { list-style: none; padding: 0; margin: 0; border-top: 1px solid var(--text); }
+  .record { display: grid; grid-template-columns: 11rem minmax(0, 1fr); gap: var(--space-m); padding-block: var(--space-m); border-bottom: 1px solid var(--line); }
+  .when { color: var(--person); margin: 0.3rem 0 0; }
+  .record h3 { font-size: var(--step-1); }
+  .org { margin: 0.25rem 0 0.5rem; }
+  .record ul { padding-left: 1.1rem; margin: 0; max-width: 62ch; }
+  .record li { margin-bottom: 0.3rem; font-size: 1.02rem; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-xl); }
+  .plain { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--space-s); }
+  .plain li { border-top: 1px solid var(--line); padding-top: var(--space-s); font-size: 1.02rem; }
+  .cite { font-size: 1rem; border-left: 2px solid var(--line); padding-left: var(--space-s); }
+  .evidence { scroll-margin-top: 5rem; }
+  .ev-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: var(--space-m); margin-top: var(--space-m); }
+  .ev-list div { border-top: 1px solid var(--line); padding-top: var(--space-xs); scroll-margin-top: 6rem; }
+  .ev-list div:target { border-top-color: var(--person); }
+  .ev-list dt { font-family: var(--font-mono); font-size: var(--step--1); font-weight: 600; }
+  .ev-list dd { margin: 0.4rem 0 0; font-size: 1rem; color: var(--text-soft); }
+  .g { display: inline-block; min-width: 1.6em; }
+  .closing { padding-top: var(--space-2xl); text-align: center; }
+  .closing p { font-size: var(--step-1); }
+  @media (max-width: 56rem) {
+    .story, .two { grid-template-columns: 1fr; }
+    .record { grid-template-columns: 1fr; gap: 0.3rem; }
+  }
+</style>

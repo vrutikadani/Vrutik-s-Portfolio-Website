@@ -1,0 +1,133 @@
+---
+import { getCollection, render } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import EvidenceTag from '../../components/EvidenceTag.astro';
+import { SITE } from '../../site.config';
+
+export async function getStaticPaths() {
+  const all = (await getCollection('systems')).sort((a, b) => a.data.order - b.data.order);
+  return all.map((entry, i) => ({ params: { slug: entry.id }, props: { entry, next: all[(i + 1) % all.length] } }));
+}
+const { entry, next } = Astro.props;
+const { Content, headings } = await render(entry);
+const d = entry.data;
+const depths = headings.filter((h) => h.depth === 2);
+const related = (await getCollection('writing', ({ data }) => (SITE.showDrafts || !data.draft) && data.related.includes(entry.id)));
+
+const ld = d.links.repo ? [{
+  '@context': 'https://schema.org', '@type': 'SoftwareSourceCode', name: d.title, description: d.premise,
+  codeRepository: d.links.repo, author: { '@type': 'Person', name: SITE.name, url: Astro.site?.href },
+}] : [];
+---
+<Base
+  title={d.title}
+  description={`${d.premise} ${d.overview.problem}`.slice(0, 158)}
+  crumbs={[{ name: 'Systems', href: '/systems/' }, { name: d.title, href: `/systems/${entry.id}/` }]}
+  jsonLd={ld}
+  pivot="Short on time? The 30-second summary is right below the title. Then jump to the Product, Engineering or Business view."
+>
+  <article class="wrap case">
+    <header class="case-head">
+      <p class="eyebrow"><a href="/systems/">Systems</a> / {d.kind}</p>
+      <h1>{d.title}</h1>
+      <p class="premise">{d.premise}</p>
+      <div class="tags">{d.evidence.map((e) => <EvidenceTag kind={e} />)}</div>
+    </header>
+
+    <section class="overview" aria-labelledby="overview">
+      <h2 id="overview" class="eyebrow">The 30-second version</h2>
+      <dl>
+        <div><dt>Problem</dt><dd>{d.overview.problem}</dd></div>
+        <div><dt>Decision</dt><dd>{d.overview.decision}</dd></div>
+        <div><dt>Result</dt><dd>{d.overview.result}</dd></div>
+        <div><dt>Why it's interesting</dt><dd>{d.overview.interesting}</dd></div>
+      </dl>
+    </section>
+
+    <div class="layout">
+      <aside class="meta" aria-label="Project facts">
+        <dl>
+          <dt>Context</dt><dd>{d.context}</dd>
+          <dt>What I owned</dt><dd>{d.owned}</dd>
+          {d.collaborators && <><dt>What others owned</dt><dd>{d.collaborators}</dd></>}
+          <dt>Stack</dt><dd class="mono">{d.stack.join(' · ')}</dd>
+        </dl>
+        {d.publicTwin && <p class="twin"><strong>About the public code.</strong> {d.publicTwin}</p>}
+        {depths.length > 0 && (
+          <nav class="depth" aria-label="Reading depth">
+            <p class="mono muted">Go deeper</p>
+            <ul>{depths.map((h) => <li><a href={`#${h.slug}`}>{h.text}</a></li>)}</ul>
+          </nav>
+        )}
+      </aside>
+
+      <div class="prose body">
+        <Content />
+
+        <div class="next-steps">
+          {d.links.repo && (
+            <a class="btn" href={d.links.repo} data-track="github_click" data-track-slug={entry.id}>Explore the implementation</a>
+          )}
+          {d.links.demo && (
+            <a class="btn btn--ghost" href={d.links.demo} data-track="demo_launch" data-track-slug={entry.id}>Open the live demo</a>
+          )}
+        </div>
+
+        {related.length > 0 && (
+          <div class="related">
+            <p class="mono muted">Related writing</p>
+            <ul>{related.map((w) => <li><a href={`/writing/${w.id}/`}>{w.data.title}</a></li>)}</ul>
+          </div>
+        )}
+      </div>
+    </div>
+
+    <nav class="next" aria-label="Next system">
+      <p class="mono muted">Next system</p>
+      <a href={`/systems/${next.id}/`}>{next.data.title} <span aria-hidden="true">→</span></a>
+    </nav>
+  </article>
+</Base>
+
+<style>
+  .case { padding-top: var(--space-xl); }
+  .case-head { max-width: 52rem; }
+  .eyebrow a { text-decoration: none; }
+  .case-head h1 { font-size: var(--step-4); font-weight: 450; letter-spacing: -0.02em; margin: var(--space-xs) 0 var(--space-s); }
+  .premise { font-size: var(--step-2); font-style: italic; color: var(--text-soft); line-height: 1.25; max-width: 30ch; }
+  .tags { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+
+  .overview {
+    margin-block: var(--space-xl); border-top: 1px solid var(--text); border-bottom: 1px solid var(--line);
+    padding-block: var(--space-m);
+  }
+  .overview h2 { font-size: var(--step--1); margin-bottom: var(--space-s); }
+  .overview dl { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-m); margin: 0; }
+  .overview dt { font-family: var(--font-mono); font-size: var(--step--1); color: var(--person); margin-bottom: 0.4rem; }
+  .overview dd { margin: 0; font-size: 1.02rem; }
+
+  .layout { display: grid; grid-template-columns: minmax(0, 17rem) minmax(0, 1fr); gap: var(--space-xl); align-items: start; }
+  .meta { position: sticky; top: 5.5rem; font-size: 0.98rem; }
+  .meta dl { margin: 0; }
+  .meta dt { font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-muted); margin-top: var(--space-s); }
+  .meta dd { margin: 0.2rem 0 0; }
+  .meta dd.mono { font-size: 0.82rem; }
+  .twin { margin-top: var(--space-m); padding: var(--space-s); background: var(--surface-sunken); border-radius: var(--radius-m); font-size: 0.95rem; }
+  .depth { margin-top: var(--space-m); }
+  .depth ul { list-style: none; padding: 0; margin: 0.4rem 0 0; }
+  .depth a { display: block; padding: 0.45rem 0; font-family: var(--font-mono); font-size: var(--step--1); }
+  .body :global(h2) { scroll-margin-top: 5.5rem; border-top: 1px solid var(--line); padding-top: var(--space-m); }
+  .body :global(h2:first-child) { margin-top: 0; }
+  .next-steps { display: flex; flex-wrap: wrap; gap: var(--space-xs); margin-top: var(--space-l); }
+  .related { margin-top: var(--space-l); }
+  .related ul { padding-left: 1.1rem; }
+  .next { margin-top: var(--space-2xl); border-top: 1px solid var(--text); padding-top: var(--space-m); }
+  .next a { font-size: var(--step-2); text-decoration: none; }
+  .next a:hover { text-decoration: underline; }
+  @media (max-width: 62rem) {
+    .overview dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .layout { grid-template-columns: 1fr; gap: var(--space-l); }
+    .meta { position: static; }
+  }
+  @media (max-width: 36rem) { .overview dl { grid-template-columns: 1fr; } }
+</style>

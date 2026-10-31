@@ -1,0 +1,160 @@
+---
+import { getCollection } from 'astro:content';
+import PivotGlyph from './PivotGlyph.astro';
+import { buildRoutes } from '../lib/pivot-routes';
+import { SITE } from '../site.config';
+
+interface Props { context?: string }
+const { context } = Astro.props;
+const writing = await getCollection('writing', ({ data }) => SITE.showDrafts || !data.draft);
+const routes = buildRoutes({ hasWriting: writing.length > 0 });
+---
+<div class="pivot" data-pivot hidden>
+  <button class="pivot-fab" type="button" aria-expanded="false" aria-controls="pivot-panel" data-pivot-open>
+    <PivotGlyph size={30} />
+    <span class="pivot-fab-label">Where to?</span>
+  </button>
+
+  <section id="pivot-panel" class="pivot-panel" aria-labelledby="pivot-title" hidden>
+    <header class="pivot-head">
+      <h2 id="pivot-title" class="pivot-title">Pivot</h2>
+      <button type="button" class="pivot-x" data-pivot-close aria-label="Close Pivot">×</button>
+    </header>
+    <p class="pivot-intro">{context ?? 'I point to the right page. Tell me why you are here.'}</p>
+
+    <ul class="pivot-asks" data-pivot-asks>
+      {routes.map((r) => (
+        <li><button type="button" data-route={r.id} data-angle={r.angle}>{r.ask}</button></li>
+      ))}
+    </ul>
+
+    {routes.map((r) => (
+      <div class="pivot-answer" data-answer={r.id} hidden>
+        <p class="pivot-ask-echo">“{r.ask}”</p>
+        <ol>
+          {r.links.map((l) => (
+            <li>
+              <a href={l.href} data-track="pivot_route_selected" data-track-route={r.id}>{l.title}</a>
+              <span>{l.why}</span>
+            </li>
+          ))}
+        </ol>
+        <button type="button" class="pivot-back" data-pivot-back>← Something else</button>
+      </div>
+    ))}
+
+    <footer class="pivot-foot">
+      <span>No AI here. Fixed routes to real pages.</span>
+      <button type="button" data-pivot-hide>Hide Pivot</button>
+    </footer>
+  </section>
+</div>
+
+<script>
+  import { track } from '../lib/track';
+
+  const root = document.querySelector<HTMLElement>('[data-pivot]');
+  const read = (k: string) => { try { return localStorage.getItem(k); } catch { return null; } };
+  const write = (k: string, v: string | null) => {
+    try { v === null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch { /* ignore */ }
+  };
+
+  if (root) {
+    const fab = root.querySelector<HTMLButtonElement>('[data-pivot-open]')!;
+    const panel = root.querySelector<HTMLElement>('#pivot-panel')!;
+    const asks = root.querySelector<HTMLElement>('[data-pivot-asks]')!;
+    const glyph = fab.querySelector<SVGElement>('.pivot-glyph');
+
+    if (read('pivot-hidden') !== '1') root.hidden = false;
+
+    const open = () => {
+      panel.hidden = false; fab.setAttribute('aria-expanded', 'true');
+      asks.querySelector<HTMLButtonElement>('button')?.focus();
+      track('pivot_open');
+    };
+    const close = (refocus = true) => {
+      panel.hidden = true; fab.setAttribute('aria-expanded', 'false');
+      reset(); if (refocus) fab.focus();
+    };
+    const reset = () => {
+      asks.hidden = false;
+      root.querySelectorAll<HTMLElement>('[data-answer]').forEach((a) => (a.hidden = true));
+      glyph?.style.setProperty('--needle', '-35deg');
+    };
+
+    fab.addEventListener('click', () => (panel.hidden ? open() : close()));
+    root.querySelector('[data-pivot-close]')?.addEventListener('click', () => close());
+    root.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !panel.hidden) close(); });
+    document.addEventListener('click', (e) => {
+      if (!panel.hidden && !root.contains(e.target as Node)) close(false);
+    });
+
+    asks.addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-route]');
+      if (!btn) return;
+      const id = btn.dataset.route!;
+      asks.hidden = true;
+      const ans = root.querySelector<HTMLElement>(`[data-answer="${id}"]`)!;
+      ans.hidden = false;
+      glyph?.style.setProperty('--needle', `${btn.dataset.angle}deg`);
+      ans.querySelector<HTMLAnchorElement>('a')?.focus();
+    });
+    root.querySelectorAll('[data-pivot-back]').forEach((b) =>
+      b.addEventListener('click', () => { reset(); asks.querySelector<HTMLButtonElement>('button')?.focus(); }),
+    );
+    root.querySelector('[data-pivot-hide]')?.addEventListener('click', () => {
+      write('pivot-hidden', '1'); close(false); root.hidden = true;
+      document.querySelector<HTMLElement>('[data-pivot-restore]')?.focus();
+    });
+    document.querySelector('[data-pivot-restore]')?.addEventListener('click', (e) => {
+      e.stopPropagation(); // otherwise the outside-click handler closes it again
+      write('pivot-hidden', null); root.hidden = false; open();
+    });
+  }
+</script>
+
+<style>
+  .pivot { position: fixed; right: max(var(--space-s), env(safe-area-inset-right)); bottom: max(var(--space-s), env(safe-area-inset-bottom)); z-index: 50; }
+  .pivot-fab {
+    display: inline-flex; align-items: center; gap: 0.5rem; min-height: 48px; padding: 0.35rem 0.9rem 0.35rem 0.45rem;
+    background: var(--pivot-bg); color: var(--text); border: 1px solid var(--pivot-ring); border-radius: 999px;
+    font-family: var(--font-mono); font-size: var(--step--1); cursor: pointer;
+    box-shadow: 0 10px 28px -18px rgb(0 0 0 / 0.5);
+  }
+  .pivot-fab:hover { border-color: var(--text); }
+  .pivot-fab:hover :global(.pivot-glyph) { --needle: 20deg; }
+  .pivot-panel {
+    position: absolute; right: 0; bottom: calc(100% + 10px);
+    width: min(23rem, calc(100vw - 2rem)); max-height: min(36rem, calc(100dvh - 7rem)); overflow: auto;
+    background: var(--surface-raised); border: 1px solid var(--line); border-radius: var(--radius-m);
+    padding: var(--space-s); box-shadow: 0 24px 60px -30px rgb(0 0 0 / 0.55);
+    animation: pivot-in var(--dur-mid) var(--ease-out);
+  }
+  @keyframes pivot-in { from { opacity: 0; transform: translateY(6px); } }
+  .pivot-head { display: flex; justify-content: space-between; align-items: center; }
+  .pivot-title { font-size: var(--step-1); font-style: italic; }
+  .pivot-x { width: 44px; height: 44px; background: none; border: 0; font-size: 1.5rem; cursor: pointer; color: var(--text-muted); }
+  .pivot-intro { font-size: 1rem; color: var(--text-soft); margin: 0.3rem 0 0.8rem; }
+  .pivot-asks { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.4rem; }
+  .pivot-asks button {
+    width: 100%; text-align: left; min-height: 44px; padding: 0.55rem 0.75rem; cursor: pointer;
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-s); font-size: 1rem;
+  }
+  .pivot-asks button:hover { border-color: var(--person); }
+  .pivot-ask-echo { font-style: italic; color: var(--text-muted); font-size: 1rem; }
+  .pivot-answer ol { padding-left: 1.2rem; margin: 0 0 0.75rem; display: grid; gap: 0.7rem; }
+  .pivot-answer li span { display: block; font-size: 0.95rem; color: var(--text-muted); }
+  .pivot-answer a { font-weight: 550; }
+  .pivot-back, .pivot-foot button {
+    background: none; border: 0; padding: 0.4rem 0; min-height: 44px; cursor: pointer;
+    font-family: var(--font-mono); font-size: var(--step--1); color: var(--text-soft); text-decoration: underline;
+  }
+  .pivot-foot { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; border-top: 1px solid var(--line); margin-top: 0.75rem; padding-top: 0.25rem; }
+  .pivot-foot span { font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); }
+  @media (max-width: 40rem) {
+    /* Icon-only on phones, but the label stays for screen readers. */
+    .pivot-fab-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+    .pivot-fab { padding: 0.35rem; }
+  }
+  @media print { .pivot { display: none; } }
+</style>

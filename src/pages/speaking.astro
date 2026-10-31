@@ -1,0 +1,104 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../layouts/Base.astro';
+import { SITE } from '../site.config';
+
+const writing = await getCollection('writing', ({ data }) => SITE.showDrafts || !data.draft);
+const byTitle = (id: string) => writing.find((w) => w.id === id);
+
+const talks = [
+  {
+    title: 'Where the model stops',
+    sub: 'Designing decision boundaries for GTM agents',
+    audience: 'GTM engineers, RevOps, AI builders',
+    takeaway: 'A decision table to write before any prompt, and how to grade an agent by what its mistakes cost.',
+    system: '/systems/ai-first-touch-agent/', piece: 'the-model-writes-the-email',
+  },
+  {
+    title: 'Every write-back needs an inverse',
+    sub: 'What happens after a seller says "that’s wrong"',
+    audience: 'CRM architects, platform engineers',
+    takeaway: 'Why idempotency isn’t enough, and a pattern for compensating writes in a system of record.',
+    system: '/systems/gtm-decision-engine/', piece: 'every-write-back-needs-an-inverse',
+  },
+  {
+    title: 'Routing is policy, not code',
+    sub: 'Lead routing that sales leaders can actually own',
+    audience: 'Sales and RevOps leaders',
+    takeaway: 'How to find the business decision hiding inside each routing bug, and keep territories as data.',
+    system: '/systems/hubspot-revops-system/', piece: 'routing-is-policy',
+  },
+  {
+    title: 'Commission is revenue infrastructure',
+    sub: 'Building pay systems people trust',
+    audience: 'Finance, sales ops, comp admins',
+    takeaway: 'Parameters instead of hard-coded numbers, honest true-ups, and reading a plan the way it was meant.',
+    system: '/systems/commission-system/', piece: undefined,
+  },
+];
+---
+<Base
+  title="Speaking"
+  description="Talk topics Vrutik Adani can give on AI agents, CRM architecture, lead routing and commission systems, each backed by a real system and a write-up."
+  crumbs={[{ name: 'Speaking', href: '/speaking/' }]}
+  pivot="These are talks I'm ready to give. Each one is backed by a system page you can read first."
+>
+  <header class="wrap head">
+    <p class="eyebrow">Speaking</p>
+    <h1>Talks I can give, and the work behind each.</h1>
+    <p class="lede measure">
+      I haven't spoken at a conference yet. I have taught a classroom of 150+ students, presented to a board,
+      and trained sales teams on systems they use every day. These are the talks I'd bring to your event,
+      meetup or team. Each one comes from something I built and can show.
+    </p>
+  </header>
+
+  <section class="wrap">
+    <ol class="talks">
+      {talks.map((t, i) => {
+        const piece = t.piece ? byTitle(t.piece) : undefined;
+        return (
+          <li class="talk">
+            <span class="n mono">0{i + 1}</span>
+            <div>
+              <h2>{t.title}</h2>
+              <p class="sub">{t.sub}</p>
+              <dl>
+                <dt>For</dt><dd>{t.audience}</dd>
+                <dt>You leave with</dt><dd>{t.takeaway}</dd>
+              </dl>
+              <p class="mono links">
+                <a href={t.system}>The system</a>
+                {piece && <a href={`/writing/${piece.id}/`}>The write-up</a>}
+              </p>
+            </div>
+          </li>
+        );
+      })}
+    </ol>
+  </section>
+
+  <section class="wrap also">
+    <h2>Also glad to</h2>
+    <p class="measure">Mentor students moving into GTM systems or technical product roles, review a team's routing or agent design, or judge a product or hackathon competition.</p>
+    <a class="btn" href="/contact/#speaking" data-track="speaking_inquiry">Invite me to contribute</a>
+  </section>
+</Base>
+<style>
+  .head { padding-block: var(--space-xl) var(--space-l); }
+  .head h1 { font-size: var(--step-4); font-weight: 450; letter-spacing: -0.02em; margin: var(--space-xs) 0 var(--space-s); max-width: 18ch; }
+  .lede { font-size: var(--step-1); color: var(--text-soft); }
+  .talks { list-style: none; padding: 0; margin: 0; border-top: 1px solid var(--text); }
+  .talk { display: grid; grid-template-columns: 3.5rem minmax(0, 1fr); gap: var(--space-m); padding-block: var(--space-l); border-bottom: 1px solid var(--line); }
+  .n { color: var(--person); padding-top: 0.5rem; }
+  .talk h2 { font-size: var(--step-3); }
+  .sub { font-style: italic; color: var(--text-soft); font-size: var(--step-1); margin: 0.3rem 0 var(--space-s); }
+  dl { display: grid; grid-template-columns: 8.5rem minmax(0, 1fr); gap: 0.4rem var(--space-s); margin: 0 0 var(--space-s); max-width: 48rem; }
+  dt { font-family: var(--font-mono); font-size: var(--step--1); color: var(--text-muted); padding-top: 0.2rem; }
+  dd { margin: 0; }
+  .links { display: flex; gap: var(--space-m); margin: 0; }
+  .links a { display: inline-block; padding-block: 0.6rem; }
+  .also { padding-top: var(--space-2xl); }
+  .also h2 { font-size: var(--step-2); margin-bottom: var(--space-s); }
+  @media (max-width: 40rem) { .talk { grid-template-columns: 1fr; gap: 0.3rem; } dl { grid-template-columns: 1fr; } }
+</style>

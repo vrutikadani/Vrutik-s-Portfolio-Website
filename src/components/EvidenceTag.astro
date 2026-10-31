@@ -1,0 +1,23 @@
+---
+import { EVIDENCE_INFO, type EvidenceKey } from '../lib/evidence';
+interface Props { kind: EvidenceKey; link?: boolean }
+const { kind, link = true } = Astro.props;
+const info = EVIDENCE_INFO[kind];
+---
+{link ? (
+  <a class="ev" href={`/about/#ev-${kind}`} title={info.meaning}>
+    <span aria-hidden="true" class="g">{info.glyph}</span>{info.label}
+  </a>
+) : (
+  <span class="ev" title={info.meaning}><span aria-hidden="true" class="g">{info.glyph}</span>{info.label}</span>
+)}
+<style>
+  .ev {
+    display: inline-flex; align-items: center; gap: 0.4em; white-space: nowrap;
+    font-family: var(--font-mono); font-size: 0.78rem; line-height: 1;
+    padding: 0.42em 0.6em; border: 1px solid var(--line); border-radius: 999px;
+    background: var(--chip-bg); color: var(--chip-fg); text-decoration: none;
+  }
+  a.ev:hover { border-color: var(--text-muted); color: var(--text); }
+  .g { font-weight: 700; color: var(--text); }
+</style>

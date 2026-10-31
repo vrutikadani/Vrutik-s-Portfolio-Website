@@ -1,0 +1,26 @@
+---
+import Base from '../layouts/Base.astro';
+import PivotGlyph from '../components/PivotGlyph.astro';
+---
+<Base title="Page not found" noindex pivot="This page doesn't exist. Tell me what you were looking for and I'll suggest a real one.">
+  <section class="wrap nf">
+    <PivotGlyph size={72} angle={160} />
+    <p class="eyebrow">404 · no matching route</p>
+    <h1>This page isn't in any routing table.</h1>
+    <p class="muted">No rule matched, so instead of a silent default, here are the places that do exist.</p>
+    <ul class="mono">
+      <li><a href="/">Home</a></li>
+      <li><a href="/systems/">Systems</a></li>
+      <li><a href="/lab/">Decision Lab</a></li>
+      <li><a href="/about/">About</a></li>
+      <li><a href="/contact/">Contact</a></li>
+    </ul>
+  </section>
+</Base>
+<style>
+  .nf { padding-block: var(--space-2xl); max-width: 40rem; }
+  .nf h1 { font-size: var(--step-3); margin: var(--space-xs) 0 var(--space-s); }
+  .nf ul { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-m); }
+  .nf a { display: inline-block; padding-block: 0.6rem; }
+  .nf :global(.pivot-glyph) { color: var(--text); margin-bottom: var(--space-m); }
+</style>

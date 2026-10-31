@@ -1,0 +1,101 @@
+---
+// Signature illustration: messy inputs pass a deterministic gate, the model
+// only reads language, a person takes the unclear cases, and a few clean
+// actions come out. Original artwork, hand-written SVG.
+const dots = [
+  [24, 58, 3], [52, 34, 2.4], [86, 70, 3.4], [30, 112, 2.2], [70, 128, 3], [104, 104, 2],
+  [18, 176, 2.6], [58, 190, 3.6], [96, 164, 2.4], [40, 236, 3], [80, 252, 2.2], [112, 222, 3],
+  [22, 298, 2.4], [64, 318, 3.2], [100, 288, 2], [36, 366, 3], [78, 384, 2.4], [110, 350, 2.8],
+];
+---
+<figure class="map" aria-labelledby="map-cap">
+  <svg viewBox="0 0 560 420" role="img" aria-labelledby="map-title map-desc">
+    <title id="map-title">How I build decisions</title>
+    <desc id="map-desc">
+      Many scattered input signals flow into a square gate where code checks the rules.
+      From there, cases that need language go to a circle, the model, and unclear cases go to a triangle, a person.
+      Four clean outcomes come out on the right: send, hold, ask a person, and stop.
+    </desc>
+
+    <!-- input dots: the mess -->
+    <g class="inputs">
+      {dots.map(([x, y, r], i) => <circle cx={x} cy={y} r={r} opacity={0.35 + (i % 5) * 0.12} />)}
+    </g>
+
+    <!-- converging lines -->
+    <g class="flow" fill="none">
+      {dots.filter((_, i) => i % 3 === 0).map(([x, y]) => (
+        <path d={`M${x} ${y} C ${150} ${y}, ${170} 210, 212 210`} />
+      ))}
+    </g>
+
+    <!-- the boundary -->
+    <line x1="275" y1="20" x2="275" y2="400" class="boundary" />
+    <text x="282" y="34" class="note">the boundary</text>
+
+    <!-- branches from the gate -->
+    <g class="branch" fill="none">
+      <path id="p-send" d="M248 210 C 290 210, 300 116, 336 116 C 380 116, 400 92, 452 92" />
+      <path id="p-hold" d="M248 210 C 330 210, 380 172, 452 172" />
+      <path id="p-ask" d="M248 210 C 290 210, 300 304, 334 304 C 380 304, 400 252, 452 252" />
+      <path id="p-stop" d="M248 210 C 320 210, 380 332, 452 332" />
+    </g>
+
+    <!-- the three marks -->
+    <rect x="212" y="192" width="36" height="36" class="m-rules" />
+    <circle cx="350" cy="116" r="16" class="m-model" />
+    <path d="M350 286 L369 318 L331 318 Z" class="m-person" />
+
+    <!-- outcomes -->
+    <g class="outcomes">
+      <rect x="452" y="78" width="104" height="28" rx="3" /><text x="464" y="97">send</text>
+      <rect x="452" y="158" width="104" height="28" rx="3" /><text x="464" y="177">hold</text>
+      <rect x="452" y="238" width="104" height="28" rx="3" /><text x="464" y="257">ask a person</text>
+      <rect x="452" y="318" width="104" height="28" rx="3" /><text x="464" y="337">stop</text>
+    </g>
+
+    <!-- handwritten-style notes -->
+    <text x="14" y="20" class="note">messy inputs</text>
+    <text x="168" y="258" class="note">code decides</text>
+    <text x="298" y="78" class="note">model reads language</text>
+    <text x="300" y="352" class="note">a person, when unsure</text>
+    <text x="432" y="400" class="note">fewer, better actions</text>
+
+    <!-- travelling signals (hidden when motion is reduced) -->
+    <g class="pulses">
+      <circle r="3.5" class="pulse-send"><animateMotion dur="5.2s" repeatCount="indefinite" begin="-1s"><mpath href="#p-send" /></animateMotion></circle>
+      <circle r="3.5" class="pulse-hold"><animateMotion dur="4.4s" repeatCount="indefinite" begin="-3s"><mpath href="#p-hold" /></animateMotion></circle>
+      <circle r="3.5" class="pulse-ask"><animateMotion dur="6s" repeatCount="indefinite" begin="-2s"><mpath href="#p-ask" /></animateMotion></circle>
+      <circle r="3.5" class="pulse-stop"><animateMotion dur="4.8s" repeatCount="indefinite" begin="-0.5s"><mpath href="#p-stop" /></animateMotion></circle>
+    </g>
+  </svg>
+  <figcaption id="map-cap" class="legend">
+    <span><i class="mark mark--rules"></i> Code decides</span>
+    <span><i class="mark mark--model"></i> Model helps</span>
+    <span><i class="mark mark--person"></i> A person asks</span>
+  </figcaption>
+</figure>
+
+<style>
+  .map { margin: 0; }
+  svg { width: 100%; height: auto; overflow: visible; }
+  .inputs circle { fill: var(--text-muted); }
+  .flow path { stroke: var(--line); stroke-width: 1.2; }
+  .branch path { stroke: var(--text-muted); stroke-width: 1.3; stroke-dasharray: 3 4; }
+  .boundary { stroke: var(--text-muted); stroke-width: 1; stroke-dasharray: 2 6; }
+  .m-rules { fill: var(--rules); }
+  .m-model { fill: var(--model); }
+  .m-person { fill: var(--person); }
+  .outcomes rect { fill: var(--surface-raised); stroke: var(--text); stroke-width: 1; }
+  .outcomes text { font-family: var(--font-mono); font-size: 12px; fill: var(--text); }
+  .note { font-family: var(--font-serif); font-style: italic; font-size: 15px; fill: var(--text-soft); }
+  .pulses circle { fill: var(--text); }
+  .pulse-send { fill: var(--model); } .pulse-ask { fill: var(--person); }
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; margin-top: var(--space-s);
+    font-family: var(--font-mono); font-size: var(--step--1); color: var(--text-soft);
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 0.45rem; }
+  @media (prefers-reduced-motion: reduce) { .pulses { display: none; } }
+  @media (max-width: 40rem) { .note { font-size: 19px; } .outcomes text { font-size: 14px; } }
+</style>

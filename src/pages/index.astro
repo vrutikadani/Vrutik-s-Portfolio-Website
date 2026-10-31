@@ -1,0 +1,239 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../layouts/Base.astro';
+import DecisionMap from '../components/DecisionMap.astro';
+import EvidenceTag from '../components/EvidenceTag.astro';
+import { SITE } from '../site.config';
+
+const systems = (await getCollection('systems')).sort((a, b) => a.data.order - b.data.order);
+const featured = systems.filter((s) => s.data.featured);
+const writing = (await getCollection('writing', ({ data }) => SITE.showDrafts || !data.draft))
+  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf())
+  .slice(0, 3);
+
+const person = {
+  '@context': 'https://schema.org', '@type': 'Person', name: SITE.name,
+  url: Astro.site?.href, description: SITE.description,
+  sameAs: [SITE.links.linkedin, SITE.links.github],
+  knowsAbout: ['Revenue operations', 'CRM architecture', 'AI agents', 'Lead routing', 'Sales compensation systems', 'Technical product management'],
+  alumniOf: [{ '@type': 'CollegeOrUniversity', name: 'Arizona State University' }, { '@type': 'CollegeOrUniversity', name: 'University of Mumbai' }],
+  worksFor: { '@type': 'Organization', name: 'Geneo United, a Lumenis company' },
+};
+const website = { '@context': 'https://schema.org', '@type': 'WebSite', name: SITE.name, url: Astro.site?.href };
+const fmt = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' });
+---
+<Base jsonLd={[person, website]} pivot="Hi. I'm Pivot. Tell me why you're here and I'll point you to two or three pages worth your time.">
+  <section class="hero wrap">
+    <div class="hero-copy">
+      <p class="eyebrow">Vrutik Adani / GTM Systems &amp; AI Engineer</p>
+      <h1>The interesting work starts after the dashboard.</h1>
+      <p class="lede">
+        I build AI agents, revenue systems and CRM architecture that turn messy commercial data
+        into decisions people can trust. This is where I show the systems, the tradeoffs and what broke.
+      </p>
+      <div class="ctas">
+        <a class="btn" href="/systems/" data-track="project_open" data-track-where="hero">Explore the systems</a>
+        <a class="btn btn--ghost" href="/lab/" data-track="lab_scenario_started" data-track-where="hero">Try the Decision Lab</a>
+      </div>
+    </div>
+    <div class="hero-art">
+      <DecisionMap />
+    </div>
+  </section>
+
+  <section class="rule-strip">
+    <div class="wrap rule-inner">
+      <p class="rule-label eyebrow">The rule I build by</p>
+      <p class="rule-text">
+        Keep decisions about money, ownership and eligibility in code.
+        Let the model handle language.
+        Put a person in front of customers first.
+      </p>
+    </div>
+  </section>
+
+  <section class="section wrap" aria-labelledby="sel">
+    <div class="section-head">
+      <p class="eyebrow kicker-rule">Selected systems</p>
+      <h2 id="sel">Three systems I run, and the decision that shaped each.</h2>
+    </div>
+    <ol class="sys-list">
+      {featured.map((s, i) => (
+        <li class="sys">
+          <span class="sys-n mono">0{i + 1}</span>
+          <div class="sys-main">
+            <p class="sys-kind mono muted">{s.data.kind} · {s.data.context}</p>
+            <h3><a href={`/systems/${s.id}/`} data-track="project_open" data-track-slug={s.id}>{s.data.title}</a></h3>
+            <p class="sys-premise">{s.data.premise}</p>
+          </div>
+          <div class="sys-side">
+            <p class="sys-decision"><span class="label muted">The decision</span>{s.data.overview.decision}</p>
+            <div class="tags">{s.data.evidence.map((e) => <EvidenceTag kind={e} />)}</div>
+          </div>
+        </li>
+      ))}
+    </ol>
+    <a class="arrow-link" href="/systems/">All six systems, including public builds you can run</a>
+  </section>
+
+  <section class="section lab-teaser" aria-labelledby="lab">
+    <div class="wrap lab-grid">
+      <div>
+        <p class="eyebrow">The Decision Lab</p>
+        <h2 id="lab">Change the inputs. Watch the rules decide.</h2>
+        <p class="measure">
+          Four small scenarios built from my public code, on synthetic data. Each one shows the
+          evidence, the rule that fired, who made the call, and what a wrong call would cost.
+          Switch between a business, product and engineering view of the same decision.
+        </p>
+        <a class="btn" href="/lab/" data-track="lab_scenario_started" data-track-where="home">Open the lab</a>
+      </div>
+      <div class="receipt" aria-label="Example decision trace">
+        <p class="mono muted r-head">scenario 1 · should the agent email this lead?</p>
+        <p class="r-input">“Hi, what does financing look like? We're adding a new service this quarter.”</p>
+        <ul class="r-trace mono">
+          <li><i class="mark mark--rules"></i><span>target specialty: dermatology</span><b>+30</b></li>
+          <li><i class="mark mark--rules"></i><span>business email domain</span><b>+10</b></li>
+          <li><i class="mark mark--rules"></i><span>purchase or financing intent</span><b>+20</b></li>
+          <li><i class="mark mark--rules"></i><span>expanding services</span><b>+10</b></li>
+          <li><i class="mark mark--rules"></i><span>near-term timeline</span><b>+10</b></li>
+        </ul>
+        <p class="r-out mono"><span>score 80 ≥ 50</span><strong>→ SDR task, reasons attached</strong></p>
+      </div>
+    </div>
+  </section>
+
+  {writing.length > 0 && (
+    <section class="section wrap" aria-labelledby="notes">
+      <div class="section-head">
+        <p class="eyebrow kicker-rule">Field notes</p>
+        <h2 id="notes">Writing about what I build.</h2>
+      </div>
+      <ul class="notes">
+        {writing.map((w) => (
+          <li>
+            <p class="mono muted">{w.data.kind} · {fmt(w.data.date)}{w.data.draft && ' · draft'}</p>
+            <h3><a href={`/writing/${w.id}/`} data-track="article_open" data-track-slug={w.id}>{w.data.title}</a></h3>
+            <p class="muted">{w.data.description}</p>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )}
+
+  <section class="section wrap proof" aria-labelledby="proof">
+    <div class="proof-grid">
+      <div>
+        <p class="eyebrow kicker-rule">On the record</p>
+        <h2 id="proof">Things other people can confirm.</h2>
+        <p class="muted measure">Each line below is backed by a document, an award or a public record. <a href="/about/#evidence">How I label evidence</a>.</p>
+      </div>
+      <ul class="proof-list">
+        <li><b>Core Value Rockstar award, “Data Drives Decisions”</b><span>Lumenis / Geneo, Oct 2026. Nominated by sales leaders for consumables and customer-purchasing dashboards.</span></li>
+        <li><b>Core Value Rockstar award, “Execution is Expected”</b><span>Lumenis / Geneo, Jan 2026. For restructuring sales territories against a deadline, including a 10-hour weekend.</span></li>
+        <li><b>Presidential Award, “Execution is Expected”</b><span>Lumenis / Geneo, Jan 2025. Presented by the President at the National Sales Meeting.</span></li>
+        <li><b>Co-author, peer-reviewed book chapter</b><span>“Fashion Intelligence,” in <i>Practical Data Mining Techniques and Applications</i>, Taylor &amp; Francis, 2023.</span></li>
+        <li><b>Product Hunt Golden Kitty Awards 2021</b><span>Winner, Diversity &amp; Inclusion Product of the Year, as part of the Leap.club team.</span></li>
+        <li><b>M.S. Information Technology, Arizona State University</b><span>4.00 GPA, 2024. Salesforce Certified Business Analyst. Tableau Desktop Specialist.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="section wrap human" aria-labelledby="human">
+    <div class="human-grid">
+      <h2 id="human" class="human-h">Off the org chart</h2>
+      <div class="measure">
+        <p>
+          I taught and mentored 150+ IT students as a teaching assistant at Arizona State. I still like
+          that part of the job most: explaining a system until the other person could rebuild it.
+        </p>
+        <p>
+          These days I also help friends rebuild their resumes. My one rule: delete any number you
+          can't defend in a follow-up question. I hold this site to the same rule.
+        </p>
+        <a class="arrow-link" href="/about/">More about me</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section wrap closing">
+    <h2>Building something where data, money and workflow meet?</h2>
+    <p class="muted">That is my favorite kind of problem. Tell me about yours.</p>
+    <a class="btn" href="/contact/" data-track="contact_click" data-track-where="home">Start a conversation</a>
+  </section>
+</Base>
+
+<style>
+  .hero {
+    display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: var(--space-xl);
+    align-items: center; padding-block: var(--space-xl) var(--space-2xl);
+  }
+  .hero h1 { font-size: var(--step-4); font-weight: 450; margin: var(--space-s) 0 var(--space-m); letter-spacing: -0.025em; }
+  .lede { font-size: var(--step-1); color: var(--text-soft); max-width: 36ch; }
+  .ctas { display: flex; flex-wrap: wrap; gap: var(--space-xs); margin-top: var(--space-m); }
+  .hero-art { min-width: 0; }
+
+  .rule-strip { border-block: 1px solid var(--line); background: var(--surface-sunken); }
+  .rule-inner { display: grid; grid-template-columns: 12rem 1fr; gap: var(--space-m); padding-block: var(--space-l); align-items: baseline; }
+  .rule-text { font-size: var(--step-2); line-height: 1.25; margin: 0; max-width: 34ch; font-style: italic; }
+
+  .sys-list { list-style: none; padding: 0; margin: 0 0 var(--space-l); border-top: 1px solid var(--text); }
+  .sys {
+    display: grid; grid-template-columns: 3.5rem minmax(0, 1.2fr) minmax(0, 1fr); gap: var(--space-m);
+    padding-block: var(--space-l); border-bottom: 1px solid var(--line);
+  }
+  .sys-n { color: var(--person); padding-top: 0.4rem; }
+  .sys h3 { font-size: var(--step-2); margin: 0.3rem 0 0.5rem; }
+  .sys h3 a { text-decoration: none; }
+  .sys h3 a:hover { text-decoration: underline; text-decoration-color: var(--person); }
+  .sys-premise { font-size: var(--step-1); font-style: italic; color: var(--text-soft); margin: 0; }
+  .sys-decision { font-size: 1rem; color: var(--text-soft); }
+  .sys-decision .label { display: block; margin-bottom: 0.3rem; }
+  .tags { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+
+  .lab-teaser { background: var(--surface-raised); border-block: 1px solid var(--line); }
+  .lab-grid { display: grid; grid-template-columns: 1fr minmax(0, 26rem); gap: var(--space-xl); align-items: center; }
+  .lab-grid h2 { font-size: var(--step-3); margin: var(--space-xs) 0 var(--space-s); }
+  .receipt {
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-m);
+    padding: var(--space-m); box-shadow: 0 1px 0 var(--line), 0 18px 40px -30px rgb(0 0 0 / 0.4);
+  }
+  .r-head { margin-bottom: var(--space-xs); font-size: 0.78rem; }
+  .r-input { font-style: italic; border-left: 2px solid var(--line); padding-left: var(--space-xs); }
+  .r-trace { list-style: none; padding: 0; margin: 0 0 var(--space-s); font-size: 0.8rem; }
+  .r-trace li { display: grid; grid-template-columns: auto 1fr auto; gap: 0.6rem; align-items: center; padding: 0.35rem 0; border-bottom: 1px dashed var(--line); }
+  .r-trace b { font-weight: 600; }
+  .r-out { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.85rem; margin: 0; }
+  .r-out strong { color: var(--rules); }
+
+  .notes { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-l); }
+  .notes li { border-top: 1px solid var(--text); padding-top: var(--space-s); }
+  .notes h3 { font-size: var(--step-1); margin: 0.4rem 0 0.5rem; }
+  .notes h3 a { text-decoration: none; }
+  .notes h3 a:hover { text-decoration: underline; }
+  .notes p { font-size: 1rem; }
+
+  .proof-grid { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: var(--space-xl); }
+  .proof h2 { font-size: var(--step-3); margin: var(--space-xs) 0 var(--space-s); }
+  .proof-list { list-style: none; padding: 0; margin: 0; }
+  .proof-list li { padding: var(--space-s) 0; border-bottom: 1px solid var(--line); display: grid; gap: 0.2rem; }
+  .proof-list li:first-child { border-top: 1px solid var(--line); }
+  .proof-list span { color: var(--text-muted); font-size: 1rem; }
+
+  .human-grid { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: var(--space-xl); }
+  .human-h { font-size: var(--step-3); font-style: italic; font-weight: 400; }
+
+  .closing { text-align: center; padding-bottom: var(--space-xl); }
+  .closing h2 { font-size: var(--step-3); max-width: 24ch; margin: 0 auto var(--space-s); }
+  .closing p { margin-bottom: var(--space-m); }
+
+  @media (max-width: 60rem) {
+    .hero, .lab-grid, .proof-grid, .human-grid { grid-template-columns: 1fr; }
+    .hero { gap: var(--space-l); padding-top: var(--space-l); }
+    .hero-art { max-width: 34rem; }
+    .rule-inner { grid-template-columns: 1fr; gap: var(--space-xs); }
+    .sys { grid-template-columns: 2.5rem minmax(0, 1fr); }
+    .sys-side { grid-column: 2; }
+    .notes { grid-template-columns: 1fr; }
+  }
+</style>

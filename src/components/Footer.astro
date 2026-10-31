@@ -1,0 +1,34 @@
+---
+import { SITE } from '../site.config';
+const year = new Date().getFullYear();
+---
+<footer class="site-footer">
+  <div class="wrap grid">
+    <div>
+      <p class="sign">Built by hand with Astro and plain CSS. Most pages ship under 6&nbsp;KB of JavaScript.</p>
+      <p class="muted small">
+        Public code on this site uses synthetic data. Nothing here is employer code or customer data.
+        <a href="/about/#evidence">How to read the claims on this site</a>.
+      </p>
+    </div>
+    <ul class="links">
+      <li><a href={SITE.links.linkedin} rel="me noopener" data-track="linkedin_click" data-track-where="footer">LinkedIn</a></li>
+      <li><a href={SITE.links.github} rel="me noopener" data-track="github_click" data-track-where="footer">GitHub</a></li>
+      <li><a href="/rss.xml">RSS</a></li>
+      <li><button type="button" class="restore" data-pivot-restore>Show the Pivot guide</button></li>
+    </ul>
+  </div>
+  <div class="wrap base mono muted">© {year} {SITE.name}</div>
+</footer>
+
+<style>
+  .site-footer { border-top: 1px solid var(--line); margin-top: var(--space-2xl); padding-block: var(--space-l) var(--space-xl); }
+  .grid { display: grid; grid-template-columns: 1fr auto; gap: var(--space-l); align-items: start; }
+  .sign { font-style: italic; font-size: var(--step-1); max-width: 30ch; }
+  .small { font-size: 1rem; max-width: 52ch; }
+  .links { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.2rem; font-family: var(--font-mono); font-size: var(--step--1); }
+  .links a, .restore { display: inline-block; min-height: 44px; padding-block: 0.7rem; }
+  .restore { background: none; border: 0; padding-inline: 0; text-decoration: underline; cursor: pointer; color: var(--text-soft); font-family: inherit; font-size: inherit; }
+  .base { margin-top: var(--space-m); }
+  @media (max-width: 40rem) { .grid { grid-template-columns: 1fr; } }
+</style>
