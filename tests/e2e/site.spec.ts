@@ -131,6 +131,20 @@ test('Build or buy: a keyboard slider change updates the verdict and tracks the 
   expect(events).toContainEqual({ event: 'lab_scenario_completed', scenario: 'buildbuy' });
 });
 
+test('Lab chart text stays readable at 390px wide', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/lab/');
+  for (const scenario of ['#tradeoffs', '#buildbuy']) {
+    const sizes = await page.locator(`${scenario} .chart text`).evaluateAll((texts) => texts.map((text) => {
+      const svgText = text as SVGTextElement;
+      const matrix = svgText.getScreenCTM()!;
+      return parseFloat(getComputedStyle(svgText).fontSize) * Math.hypot(matrix.c, matrix.d);
+    }));
+    expect(sizes.length).toBeGreaterThan(0);
+    for (const size of sizes) expect(size).toBeGreaterThanOrEqual(11);
+  }
+});
+
 test('analytics events fire without leaking typed text', async ({ page }) => {
   await page.goto('/lab/');
   await page.evaluate(() => { (window as any).__ev = []; addEventListener('site:track', (e: any) => (window as any).__ev.push(e.detail)); });

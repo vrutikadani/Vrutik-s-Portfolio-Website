@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { compareBuildBuy, DEFAULT_BUILD_BUY, formatK } from '../../src/lib/lab/buildbuy';
+import { compareBuildBuy, DEFAULT_BUILD_BUY, formatMoney } from '../../src/lib/lab/buildbuy';
 import { renderBuildBuyChart, renderBuildBuyMetrics } from '../../src/lib/lab/render';
 
 test('default totals include setup, delay, 36 months of upkeep and rule changes', () => {
@@ -60,11 +60,32 @@ test('zero coverage includes a full build plus integration before first value', 
   assert.equal(r.buy.setup, 60000);
 });
 
-test('$K formatting uses at most one decimal, including small and large costs', () => {
-  for (const [value, expected] of [[0, '$0K'], [1000, '$1K'], [12550, '$12.6K'], [1234567, '$1234.6K'], [49, '$0K']] as const) {
-    assert.equal(formatK(value), expected);
+test('money formatting uses at most one decimal, including small and large costs', () => {
+  for (const [value, expected] of [[0, '$0'], [1000, '$1K'], [12550, '$12.6K'], [1234567, '$1.2M'], [49, '$49']] as const) {
+    assert.equal(formatMoney(value), expected);
   }
   assert.match(renderBuildBuyMetrics(compareBuildBuy(DEFAULT_BUILD_BUY)), /\$103.8K/);
+});
+
+test('money below one million stays in thousands', () => {
+  assert.equal(formatMoney(999000), '$999K');
+});
+
+test('money switches to millions at one million', () => {
+  assert.equal(formatMoney(1000000), '$1.0M');
+});
+
+test('multi-million costs use one decimal in millions', () => {
+  assert.equal(formatMoney(2171400), '$2.2M');
+});
+
+test('a rule-change break-even above the slider range does not claim a tipping point', () => {
+  const input = { ...DEFAULT_BUILD_BUY, buildWeeks: 52, hourlyCost: 300, maintenanceHours: 160 };
+  const r = compareBuildBuy(input);
+  assert.ok(r.ruleBreakEven! > 52);
+  assert.equal(r.verdict, 'Buy stays cheaper at every rule-change rate on this slider. The biggest gap is maintenance versus license cost.');
+  assert.equal(compareBuildBuy({ ...input, changesPerYear: 52 }).winner, 'buy');
+  assert.doesNotMatch(r.verdict, /tips the decision/);
 });
 
 test('parallel coincident costs tie with no spurious crossover or division by zero', () => {

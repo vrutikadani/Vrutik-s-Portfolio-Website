@@ -2,7 +2,7 @@
 // and the browser (updates on input). Keep them pure and escaped.
 import type { Step } from './lead';
 import type { Frame } from './correction';
-import { formatK, type BuildBuyResult } from './buildbuy';
+import { formatMoney, type BuildBuyResult } from './buildbuy';
 
 export const esc = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -48,28 +48,28 @@ export function renderChart(pts: { t: number; cost: number }[], current: number)
   return `<svg viewBox="0 0 ${W} ${H}" class="chart" role="img" aria-label="Daily cost by review threshold. Lowest cost near ${best.t.toFixed(2)}. Current setting ${current.toFixed(2)}.">
     <line x1="${P}" y1="${H - P}" x2="${W - 10}" y2="${H - P}" class="axis"/>
     <line x1="${P}" y1="10" x2="${P}" y2="${H - P}" class="axis"/>
-    <text x="${P}" y="${H - 10}" class="tick">0.30</text><text x="${W - 40}" y="${H - 10}" class="tick">0.96</text>
-    <text x="${(W / 2) - 70}" y="${H - 10}" class="tick">review threshold →</text>
-    <text x="4" y="16" class="tick">cost</text>
+    <text x="${P}" y="${H - 10}" class="tick">0.30</text><text x="${W - 10}" y="${H - 10}" text-anchor="end" class="tick">0.96</text>
+    <text x="${W / 2}" y="${H - 10}" text-anchor="middle" class="tick">review threshold →</text>
+    <text x="4" y="22" class="tick">cost</text>
     <path d="${d}" class="line"/>
     <circle cx="${x(best.t)}" cy="${y(best.cost)}" r="5" class="best"/>
-    <text x="${x(best.t) + 8}" y="${y(best.cost) + 18}" class="note">cheapest ≈ ${best.t.toFixed(2)}</text>
+    <text x="${Math.min(x(best.t) + 8, W - 180)}" y="${y(best.cost) + 26}" class="note">cheapest ≈ ${best.t.toFixed(2)}</text>
     <line x1="${x(cur.t)}" y1="10" x2="${x(cur.t)}" y2="${H - P}" class="cur"/>
     <circle cx="${x(cur.t)}" cy="${y(cur.cost)}" r="5" class="curdot"/>
   </svg>`;
 }
 
 export function renderBuildBuyMetrics(r: BuildBuyResult): string {
-  return `<div><dt>Build · 3-year cost</dt><dd>${formatK(r.build.total)}</dd></div>
-    <div><dt>Buy · 3-year cost</dt><dd>${formatK(r.buy.total)}</dd></div>
+  return `<div><dt>Build · 3-year cost</dt><dd>${formatMoney(r.build.total)}</dd></div>
+    <div><dt>Buy · 3-year cost</dt><dd>${formatMoney(r.buy.total)}</dd></div>
     <div><dt>Build · first value</dt><dd>${Number(r.build.weeks.toFixed(1))} weeks</dd></div>
     <div><dt>Buy · first value</dt><dd>${Number(r.buy.weeks.toFixed(1))} weeks</dd></div>
-    <div><dt>Build · rule-change cost</dt><dd>${formatK(r.build.ruleChanges)}</dd></div>
-    <div><dt>Buy · rule-change cost</dt><dd>${formatK(r.buy.ruleChanges)}</dd></div>`;
+    <div><dt>Build · rule-change cost</dt><dd>${formatMoney(r.build.ruleChanges)}</dd></div>
+    <div><dt>Buy · rule-change cost</dt><dd>${formatMoney(r.buy.ruleChanges)}</dd></div>`;
 }
 
 export function renderBuildBuyChart(r: BuildBuyResult): string {
-  const W = 520, H = 240, P = 54, bottom = H - 40;
+  const W = 520, H = 260, P = 54, bottom = H - 60;
   const max = Math.max(r.build.total, r.buy.total, 1) * 1.1;
   const x = (m: number) => P + m / 36 * (W - P - 12);
   const y = (c: number) => bottom - c / max * (bottom - 36);
@@ -77,11 +77,11 @@ export function renderBuildBuyChart(r: BuildBuyResult): string {
   const cross = r.crossoverMonth;
   const summary = cross === null ? 'No crossover in months 1–36.' : `Crossover at month ${Number(cross.toFixed(1))}.`;
   const crossCost = cross === null ? 0 : r.build.setup + r.build.delay + cross / 36 * (r.build.recurring + r.build.ruleChanges);
-  return `<svg viewBox="0 0 ${W} ${H}" class="chart" role="img" aria-label="Illustrative cumulative cost over 36 months. Build ${formatK(r.build.total)}, buy ${formatK(r.buy.total)}. Solid line: build. Dashed line: buy. ${summary}">
+  return `<svg viewBox="0 0 ${W} ${H}" class="chart" role="img" aria-label="Illustrative cumulative cost over 36 months. Build ${formatMoney(r.build.total)}, buy ${formatMoney(r.buy.total)}. Solid line: build. Dashed line: buy. ${summary}">
     <line x1="${P}" y1="${bottom}" x2="${W - 12}" y2="${bottom}" class="axis"/>
     <line x1="${P}" y1="36" x2="${P}" y2="${bottom}" class="axis"/>
-    <text x="4" y="42" class="tick">${formatK(max)}</text><text x="4" y="${bottom}" class="tick">$0K</text>
-    ${[0, 12, 24, 36].map((m) => `<text x="${x(m)}" y="${H - 20}" text-anchor="middle" class="tick">${m}</text>`).join('')}
+    <text x="4" y="42" class="tick">${formatMoney(max)}</text><text x="4" y="${bottom}" class="tick">${formatMoney(0)}</text>
+    ${[0, 12, 24, 36].map((m) => `<text x="${x(m)}" y="${H - 35}" text-anchor="middle" class="tick">${m}</text>`).join('')}
     <text x="${W / 2}" y="${H - 2}" text-anchor="middle" class="tick">months from kickoff</text>
     <path d="${path('build')}" class="line"/><path d="${path('buy')}" class="line buy-line"/>
     ${cross === null ? '' : `<line x1="${x(cross)}" y1="36" x2="${x(cross)}" y2="${bottom}" class="cur"/><circle cx="${x(cross)}" cy="${y(crossCost)}" r="4" class="curdot"/>`}

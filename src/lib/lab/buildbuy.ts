@@ -21,6 +21,7 @@ export const DEFAULT_BUILD_BUY: BuildBuyInput = {
   annualLicense: 18000, integrationWeeks: 3, coverage: 90,
   changesPerYear: 4, delayCost: 1000,
 };
+export const MAX_RULE_CHANGES = 52;
 
 export interface OptionCost {
   total: number;
@@ -40,7 +41,9 @@ export interface BuildBuyResult {
   winner: 'build' | 'buy' | 'tie';
 }
 
-export function formatK(dollars: number): string {
+export function formatMoney(dollars: number): string {
+  if (Math.abs(dollars) < 1000) return `$${Number(dollars.toFixed(1))}`;
+  if (Math.abs(dollars) >= 1000000) return `$${(dollars / 1000000).toFixed(1)}M`;
   return `$${Number((dollars / 1000).toFixed(1))}K`;
 }
 
@@ -76,7 +79,7 @@ export function compareBuildBuy(input: BuildBuyInput): BuildBuyResult {
   const ruleBreakEven = yearlyChangeDifference > 0 && baseDifference >= 0 ? baseDifference / yearlyChangeDifference : null;
   const difference = build.total - buy.total;
   const winner = Math.abs(difference) < 0.01 ? 'tie' : difference < 0 ? 'build' : 'buy';
-  const saving = `${winner === 'build' ? 'Build' : 'Buy'} costs ${formatK(Math.abs(difference))} less over 3 years.`;
+  const saving = `${winner === 'build' ? 'Build' : 'Buy'} costs ${formatMoney(Math.abs(difference))} less over 3 years.`;
   const factors = [
     { name: 'setup engineering effort', difference: build.setup - buy.setup },
     { name: 'maintenance versus license cost', difference: build.recurring - buy.recurring },
@@ -84,7 +87,9 @@ export function compareBuildBuy(input: BuildBuyInput): BuildBuyResult {
     { name: 'the cost of waiting', difference: build.delay - buy.delay },
   ];
   const deciding = factors.reduce((a, b) => Math.abs(b.difference) > Math.abs(a.difference) ? b : a).name;
-  const verdict = ruleBreakEven !== null
+  const verdict = ruleBreakEven !== null && ruleBreakEven > MAX_RULE_CHANGES
+    ? `Buy stays cheaper at every rule-change rate on this slider. The biggest gap is ${deciding}.`
+    : ruleBreakEven !== null
     ? `${winner === 'tie' ? 'The 3-year costs tie.' : saving} Rule-change work tips the decision: buy wins below ${Number(ruleBreakEven.toFixed(1))} changes a year; build wins above it, with other inputs fixed.`
     : `${winner === 'tie' ? 'The 3-year costs tie.' : saving} The largest cost difference is ${deciding}. ${yearlyChangeDifference > 0 ? 'Build stays cheaper even with no rule changes.' : 'Rule changes add no labor cost at this hourly rate.'}`;
   return { build, buy, points, crossoverMonth, ruleBreakEven, verdict, winner };
