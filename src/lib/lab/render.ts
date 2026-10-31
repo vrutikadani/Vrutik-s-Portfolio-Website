@@ -2,6 +2,7 @@
 // and the browser (updates on input). Keep them pure and escaped.
 import type { Step } from './lead';
 import type { Frame } from './correction';
+import { formatK, type BuildBuyResult } from './buildbuy';
 
 export const esc = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -56,4 +57,33 @@ export function renderChart(pts: { t: number; cost: number }[], current: number)
     <line x1="${x(cur.t)}" y1="10" x2="${x(cur.t)}" y2="${H - P}" class="cur"/>
     <circle cx="${x(cur.t)}" cy="${y(cur.cost)}" r="5" class="curdot"/>
   </svg>`;
+}
+
+export function renderBuildBuyMetrics(r: BuildBuyResult): string {
+  return `<div><dt>Build · 3-year cost</dt><dd>${formatK(r.build.total)}</dd></div>
+    <div><dt>Buy · 3-year cost</dt><dd>${formatK(r.buy.total)}</dd></div>
+    <div><dt>Build · first value</dt><dd>${Number(r.build.weeks.toFixed(1))} weeks</dd></div>
+    <div><dt>Buy · first value</dt><dd>${Number(r.buy.weeks.toFixed(1))} weeks</dd></div>
+    <div><dt>Build · rule-change cost</dt><dd>${formatK(r.build.ruleChanges)}</dd></div>
+    <div><dt>Buy · rule-change cost</dt><dd>${formatK(r.buy.ruleChanges)}</dd></div>`;
+}
+
+export function renderBuildBuyChart(r: BuildBuyResult): string {
+  const W = 520, H = 240, P = 54, bottom = H - 40;
+  const max = Math.max(r.build.total, r.buy.total, 1) * 1.1;
+  const x = (m: number) => P + m / 36 * (W - P - 12);
+  const y = (c: number) => bottom - c / max * (bottom - 36);
+  const path = (key: 'build' | 'buy') => r.points.map((p, i) => `${i ? 'L' : 'M'}${x(p.month).toFixed(1)} ${y(p[key]).toFixed(1)}`).join(' ');
+  const cross = r.crossoverMonth;
+  const summary = cross === null ? 'No crossover in months 1–36.' : `Crossover at month ${Number(cross.toFixed(1))}.`;
+  const crossCost = cross === null ? 0 : r.build.setup + r.build.delay + cross / 36 * (r.build.recurring + r.build.ruleChanges);
+  return `<svg viewBox="0 0 ${W} ${H}" class="chart" role="img" aria-label="Illustrative cumulative cost over 36 months. Build ${formatK(r.build.total)}, buy ${formatK(r.buy.total)}. Solid line: build. Dashed line: buy. ${summary}">
+    <line x1="${P}" y1="${bottom}" x2="${W - 12}" y2="${bottom}" class="axis"/>
+    <line x1="${P}" y1="36" x2="${P}" y2="${bottom}" class="axis"/>
+    <text x="4" y="42" class="tick">${formatK(max)}</text><text x="4" y="${bottom}" class="tick">$0K</text>
+    ${[0, 12, 24, 36].map((m) => `<text x="${x(m)}" y="${H - 20}" text-anchor="middle" class="tick">${m}</text>`).join('')}
+    <text x="${W / 2}" y="${H - 2}" text-anchor="middle" class="tick">months from kickoff</text>
+    <path d="${path('build')}" class="line"/><path d="${path('buy')}" class="line buy-line"/>
+    ${cross === null ? '' : `<line x1="${x(cross)}" y1="36" x2="${x(cross)}" y2="${bottom}" class="cur"/><circle cx="${x(cross)}" cy="${y(crossCost)}" r="4" class="curdot"/>`}
+  </svg><p class="tiny muted">Solid: build. Dashed: buy. ${summary}</p>`;
 }

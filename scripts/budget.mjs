@@ -1,7 +1,7 @@
 // Performance budget for the built site. Fails the build if a page ships
 // more than its share. Sizes are gzip, which is what a visitor downloads.
 import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, relative, sep } from 'node:path';
 import { gzipSync } from 'node:zlib';
 
 const DIST = 'dist';
@@ -18,10 +18,11 @@ for (const p of pages.sort()) {
   const inline = [...html.toString().matchAll(/<script(?![^>]*(src=|application\/ld\+json))[^>]*>([\s\S]*?)<\/script>/g)].map((m) => m[2]).join('');
   const jsRaw = srcs.reduce((n, s) => n + statSync(join(DIST, s)).size, 0) + Buffer.byteLength(inline);
   const jsGz = srcs.reduce((n, s) => n + gz(readFileSync(join(DIST, s))), 0) + gz(Buffer.from(inline));
-  const isLab = p.includes(`${DIST}/lab/`);
+  const page = '/' + relative(DIST, p).split(sep).join('/').replace('index.html', '');
+  const isLab = page.startsWith('/lab/');
   const over = gz(html) > BUDGET.html || jsGz > (isLab ? BUDGET.jsLab : BUDGET.js);
   if (over) fail = true;
-  rows.push({ page: p.replace(DIST, '').replace('index.html', ''), htmlGz: gz(html), jsRaw, jsGz, ok: over ? 'OVER' : 'ok' });
+  rows.push({ page, htmlGz: gz(html), jsRaw, jsGz, ok: over ? 'OVER' : 'ok' });
 }
 const font = statSync('public/fonts/newsreader-roman.woff2').size;
 if (font > BUDGET.fontsPreloaded) fail = true;
